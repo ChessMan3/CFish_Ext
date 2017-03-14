@@ -369,7 +369,7 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 
     // Analyse the safe enemy's checks which are possible on next move...
     safe  = ~pieces_c(Them);
-    safe &= ~(ei->attackedBy[Us][0] | (undefended & ei->attackedBy2[Them]));
+    safe &= ~ei->attackedBy[Us][0] | (undefended & ei->attackedBy2[Them]);
 
     // ... and some other potential checks, only requiring the square to be
     // safe from pawn-attacks, and not being occupied by a blocked pawn.
