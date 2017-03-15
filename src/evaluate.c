@@ -458,7 +458,7 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
 
   enum { Minor, Rook };
 
-  Bitboard b, weak, defended, safeThreats;
+  Bitboard b, weak, defended, stronglyProtected, safeThreats;
   Score score = SCORE_ZERO;
 
   // Non-pawn enemies attacked by a pawn
@@ -477,12 +477,17 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
       score += ThreatBySafePawn[piece_on(pop_lsb(&safeThreats)) - 8 * Them];
   }
 
-  // Non-pawn enemies defended by a pawn
-  defended = pieces_c(Them) & ~pieces_p(PAWN) & ei->attackedBy[Them][PAWN];
+  // Squares strongly protected by the opponent, either because they attack the
+  // square with a pawn, or because they attack the square twice and we don't.
+  stronglyProtected =  ei->attackedBy[Them][PAWN]
+                     | (ei->attackedBy2[Them] & ei->attackedBy2[Us]);
+  
+  // Non-pawn enemies, strongly protected
+  defended = pieces_c(Them) & ~pieces_p(PAWN) & stronglyProtected;
 
-  // Enemies not defended by a pawn and under our attack
+  // Enemies not strongly protected and under our attack
   weak =   pieces_c(Them)
-        & ~ei->attackedBy[Them][PAWN]
+        & ~stronglyProtected
         &  ei->attackedBy[Us][0];
 
   // Add a bonus according to the kind of attacking pieces
