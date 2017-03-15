@@ -721,7 +721,7 @@ Value evaluate(const Pos *pos)
   assert(!pos_checkers());
 
   Score mobility[2] = { SCORE_ZERO, SCORE_ZERO };
-  Value v
+  Value v;
   EvalInfo ei;
 
   // Probe the material hash table
