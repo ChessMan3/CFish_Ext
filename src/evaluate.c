@@ -681,27 +681,25 @@ INLINE int evaluate_scale_factor(const Pos *pos, EvalInfo *ei, Value eg)
 
   // If we don't already have an unusual scale factor, check for certain
   // types of endgames, and use a lower scale for those.
-  if (    ei->me->gamePhase < PHASE_MIDGAME
-      && (sf == SCALE_FACTOR_NORMAL || sf == SCALE_FACTOR_ONEPAWN)) {
+  if (sf == SCALE_FACTOR_NORMAL || sf == SCALE_FACTOR_ONEPAWN)  {   
     if (opposite_bishops(pos)) {
       // Endgame with opposite-colored bishops and no other pieces
       // (ignoring pawns) is almost a draw, in case of KBP vs KB, it is
       // even more a draw.
       if (   pos_non_pawn_material(WHITE) == BishopValueMg
           && pos_non_pawn_material(BLACK) == BishopValueMg)
-        sf = more_than_one(pieces_p(PAWN)) ? 31 : 9;
+        return more_than_one(pieces_p(PAWN)) ? 31 : 9;
 
       // Endgame with opposite-colored bishops, but also other pieces. Still
       // a bit drawish, but not as drawish as with only the two bishops.
-      else
-        sf = 46;
+      return 46;
     }
     // Endings where weaker side can place his king in front of the opponent's
     // pawns are drawish.
     else if (    abs(eg) <= BishopValueEg
              &&  piece_count(strongSide, PAWN) <= 2
              && !pawn_passed(pos, strongSide ^ 1, square_of(strongSide ^ 1, KING)))
-      sf = 37 + 7 * piece_count(strongSide, PAWN);
+      return 37 + 7 * piece_count(strongSide, PAWN);
   }
 
   return sf;
