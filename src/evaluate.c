@@ -242,11 +242,6 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
       ei->kingAttackersWeight[Us] += KingAttackWeights[Pt];
       ei->kingAdjacentZoneAttacksCount[Us] += popcount(b & ei->attackedBy[Them][KING]);
     }
-
-    if (Pt == QUEEN)
-      b &= ~(  ei->attackedBy[Them][KNIGHT]
-             | ei->attackedBy[Them][BISHOP]
-             | ei->attackedBy[Them][ROOK]);
     
     int mob = popcount(b & mobilityArea[Us]);
 
