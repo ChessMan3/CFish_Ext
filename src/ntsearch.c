@@ -351,11 +351,7 @@ moves_loop: // When in check search starts from here.
     moveCountPruning =   depth < 16 * ONE_PLY
                 && moveCount >= FutilityMoveCounts[improving][depth / ONE_PLY];
 
-    // Step 12. Extend checks
-    if (    givesCheck
-        && !moveCountPruning
-        &&  see_test(pos, move, 0))
-      extension = ONE_PLY;
+    // Step 12. Singular and Gives Check Extensions
 
     // Singular extension search. If all moves but one fail low on a search
     // of (alpha-s, beta-s), and just one fails high on (alpha, beta), then
@@ -364,7 +360,6 @@ moves_loop: // When in check search starts from here.
     // result is lower than ttValue minus a margin then we extend the ttMove.
     if (    singularExtensionNode
         &&  move == ttMove
-        && !extension
         &&  is_legal(pos, move))
     {
       Value rBeta = max(ttValue - 2 * depth / ONE_PLY, -VALUE_MATE);
@@ -385,6 +380,10 @@ moves_loop: // When in check search starts from here.
       ss->stage++;
       ss->countermove = cm; // pedantic
     }
+     else if (    givesCheck
+        && !moveCountPruning
+        &&  see_test(pos, move, 0))
+      extension = ONE_PLY;
 
     // Update the current move (this must be done after singular extension search)
     newDepth = depth - ONE_PLY + extension;
