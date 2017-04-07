@@ -71,7 +71,7 @@ prefetch = no
 popcnt = no
 sse = no
 pext = no
-native = no
+native = yes
 numa = yes
 
 ### 2.2 Architecture specific
