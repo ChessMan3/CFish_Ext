@@ -214,9 +214,8 @@ void search_clear()
 
   for (int idx = 0; idx < Threads.num_threads; idx++) {
     Pos *pos = Threads.pos[idx];
-    stats_clear(pos->history);
     stats_clear(pos->counterMoves);
-    stats_clear(pos->fromTo);
+    stats_clear(pos->history);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -691,8 +690,7 @@ static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
     cms_update(*fmh2, pc, s, bonus);
 }
 
-// update_stats() updates killers, history, countermove and countermove
-// plus follow-up move history when a new quiet best move is found.
+// update_stats() updates move sorting heuristics when a new quiet best move is found
 
 void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
                   int quietsCnt, Value bonus)
@@ -703,8 +701,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
   }
 
   int c = pos_stm();
-  ft_update(*pos->fromTo, c, move, bonus);
-  hs_update(*pos->history, moved_piece(move), to_sq(move), bonus);
+  hs_update(*pos->history, c, move, bonus);
   update_cm_stats(ss, moved_piece(move), to_sq(move), bonus);
 
   if ((ss-1)->counterMoves) {
@@ -714,8 +711,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
 
   // Decrease all the other played quiet moves
   for (int i = 0; i < quietsCnt; i++) {
-    ft_update(*pos->fromTo, c, quiets[i], -bonus);
-    hs_update(*pos->history, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
+    hs_update(*pos->history, c, quiets[i], -bonus);
     update_cm_stats(ss, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
   }
 }
