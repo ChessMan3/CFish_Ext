@@ -169,7 +169,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
     if (connected)
       score += Connected[opposed][!!phalanx][!!more_than_one(supported)][relative_rank_s(Us, s)];
 
-    if (doubled && !supported)
+    if (doubled & !supported)
        score -= Doubled;
 
     if (lever)
