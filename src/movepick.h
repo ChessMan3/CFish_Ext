@@ -30,7 +30,7 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
-INLINE void hs_update(HistoryStats hs, int c, Move m, Value v)
+INLINE void hs_update(HistoryStats hs, int c, Move m, int v)
 {
   int w = v >= 0 ? v : -v;
   if (w >= 324)
@@ -41,12 +41,12 @@ INLINE void hs_update(HistoryStats hs, int c, Move m, Value v)
   hs[c][m] += ((int)v) * 32;
 }
  
-INLINE Value hs_get(HistoryStats hs, int c, Move m)
+INLINE int hs_get(HistoryStats hs, int c, Move m)
 {
   return hs[c][m & 4095];
 }
 
-INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, Value v)
+INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, int v)
 {
   int w = v >= 0 ? v : -v;
   if (w >= 324)

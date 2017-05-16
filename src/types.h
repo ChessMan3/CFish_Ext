@@ -409,7 +409,7 @@ typedef Value HistoryStats[2][4096];
 
 struct ExtMove {
   Move move;
-  Value value;
+  int value;
 };
 
 typedef struct ExtMove ExtMove;

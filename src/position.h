@@ -85,7 +85,7 @@ struct Stack {
   Move excludedMove;
   Move killers[2];
   Value staticEval;
-  Value history;
+  int history;
   int moveCount;
 
   // MovePicker data

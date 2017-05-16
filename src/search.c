@@ -140,8 +140,8 @@ static Value qsearch_NonPV_false(Pos *pos, Stack *ss, Value alpha, Depth depth);
 static Value value_to_tt(Value v, int ply);
 static Value value_from_tt(Value v, int ply);
 static void update_pv(Move *pv, Move move, Move *childPv);
-static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus);
-static void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets, int quietsCnt, Value bonus);
+static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus);
+static void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets, int quietsCnt, int bonus);
 static void check_time(void);
 static void stable_sort(RootMove *rm, int num);
 static void uci_print_pv(Pos *pos, Depth depth, Value alpha, Value beta);
@@ -643,7 +643,7 @@ static void update_pv(Move *pv, Move move, Move *childPv)
 
 // update_cm_stats() updates countermove and follow-up move history.
 
-static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
+static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus)
 {
   CounterMoveStats *cmh  = (ss-1)->counterMoves;
   CounterMoveStats *fmh1 = (ss-2)->counterMoves;
@@ -662,7 +662,7 @@ static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
 // update_stats() updates move sorting heuristics when a new quiet best move is found
 
 void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
-                  int quietsCnt, Value bonus)
+                  int quietsCnt, int bonus)
 {
   if (ss->killers[0] != move) {
     ss->killers[1] = ss->killers[0];
