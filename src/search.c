@@ -122,38 +122,6 @@ static void easy_move_update(Pos *pos, Move *newPv)
 // Set of rows with half bits set to 1 and half to 0. It is used to allocate
 // the search depths across the threads.
 
-#define HalfDensitySize 20
-
-static const int HalfDensity[HalfDensitySize][8] = {
-  {0, 1},
-  {1, 0},
-  {0, 0, 1, 1},
-  {0, 1, 1, 0},
-  {1, 1, 0, 0},
-  {1, 0, 0, 1},
-  {0, 0, 0, 1, 1, 1},
-  {0, 0, 1, 1, 1, 0},
-  {0, 1, 1, 1, 0, 0},
-  {1, 1, 1, 0, 0, 0},
-  {1, 1, 0, 0, 0, 1},
-  {1, 0, 0, 0, 1, 1},
-  {0, 0, 0, 0, 1, 1, 1, 1},
-  {0, 0, 0, 1, 1, 1, 1, 0},
-  {0, 0, 1, 1, 1, 1, 0 ,0},
-  {0, 1, 1, 1, 1, 0, 0 ,0},
-  {1, 1, 1, 1, 0, 0, 0 ,0},
-  {1, 1, 1, 0, 0, 0, 0 ,1},
-  {1, 1, 0, 0, 0, 0, 1 ,1},
-  {1, 0, 0, 0, 0, 1, 1 ,1},
-};
-
-static const int HalfDensityRowSize[HalfDensitySize] = {
-  2, 2,
-  4, 4, 4, 4,
-  6, 6, 6, 6, 6, 6,
-  8, 8, 8, 8, 8, 8, 8, 8
-};
-
 static Value DrawValue[2];
 //static CounterMoveHistoryStats CounterMoveHistory;
 
@@ -356,6 +324,9 @@ void mainthread_search(void)
   IO_UNLOCK;
 }
 
+// Sizes and phases of the skip-blocks, used for distributing search depths across the threads.
+static int skipsize[20] = {1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4};
+static int phase   [20] = {0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7};
 
 // thread_search() is the main iterative deepening loop. It calls search()
 // repeatedly with increasing depth until the allocated thinking time has
@@ -401,22 +372,17 @@ void thread_search(Pos *pos)
 
   RootMoves *rm = pos->rootMoves;
   multiPV = min(multiPV, rm->size);
+  
+  int hIdx = (pos->thread_idx - 1) % 20; // helper index, cycle after 20 threads
 
-  // Iterative deepening loop until requested to stop or the target depth
-  // is reached.
+  // Iterative deepening loop until requested to stop or the target depth is reached.
   while (   (pos->rootDepth += ONE_PLY) < DEPTH_MAX
          && !Signals.stop
          && (!Limits.depth || threads_main()->rootDepth <= Limits.depth))
   {
-    // Set up the new depths for the helper threads skipping on average every
-    // 2nd ply (using a half-density matrix).
-    if (pos->thread_idx != 0) {
-      int row = (pos->thread_idx - 1) % HalfDensitySize;
-      int col = (pos->rootDepth / ONE_PLY + pos_game_ply())
-                                               % HalfDensityRowSize[row];
-      if (HalfDensity[row][col])
-        continue;
-    }
+    // skip half of the plies in blocks depending on game ply and helper index.
+       if (pos->thread_idx && ((pos->rootDepth / ONE_PLY + pos_game_ply() + phase[hIdx]) / skipsize[hIdx]) % 2)
+           continue;
 
     // Age out PV variability metric
     if (pos->thread_idx == 0) {
