@@ -81,9 +81,9 @@ static const Score MobilityBonus[][32] = {
   { S(-48,-59), S(-20,-23), S( 16, -3), S( 26, 13), S( 38, 24), S( 51, 42), // Bishops
     S( 55, 54), S( 63, 57), S( 63, 65), S( 68, 73), S( 81, 78), S( 81, 86),
     S( 91, 88), S( 98, 97) },
-  { S(-60,-77), S(-26,-20), S(-11, 27), S( -6, 57), S( -3, 69), S( -1, 82), // Rooks
-    S( 10,109), S( 16,121), S( 24,131), S( 25,143), S( 32,155), S( 32,163),
-    S( 43,167), S( 48,171), S( 56,173) },
+  { S(-58,-76), S(-27,-18), S(-15, 28), S(-10, 55), S( -5, 69), S( -2, 82), // Rooks
+    S(  9,112), S( 16,118), S( 30,132), S( 29,142), S( 32,155), S( 38,165),
+    S( 46,166), S( 48,169), S( 58,171) },
   { S(-39,-36), S(-21,-15), S(  3,  8), S(  3, 18), S( 14, 34), S( 22, 54), // Queens
     S( 28, 61), S( 41, 73), S( 43, 79), S( 48, 92), S( 56, 94), S( 60,104),
     S( 60,113), S( 66,120), S( 67,123), S( 70,126), S( 71,133), S( 73,136),
@@ -169,9 +169,9 @@ static const Score TrappedBishopA1H1 = S(50, 50);
 static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
 
 // Penalties for enemy's safe checks
-#define QueenCheck        810
-#define RookCheck         888
-#define BishopCheck       400
+#define QueenCheck        780
+#define RookCheck         880
+#define BishopCheck       435
 #define KnightCheck       790
 
 
@@ -370,12 +370,12 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
     // number and types of the enemy's attacking pieces, the number of
     // attacked and undefended squares around our king and the quality of
     // the pawn shelter (current 'score' value).
-    kingDanger =  ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
-                + 103 * ei->kingAdjacentZoneAttacksCount[Them]
-                + 190 * popcount(undefended)
-                + 142 * (popcount(b) + !!pinned_pieces(pos, Us))
-                - 810 * !pieces_cp(Them, QUEEN)
-                -   6 * mg_value(score) / 5 - 5;
+    kingDanger =        ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
+                + 102 * ei->kingAdjacentZoneAttacksCount[Them]
+                + 201 * popcount(undefended)
+                + 143 * (popcount(b) + !!pinned_pieces(pos, Us))
+                - 848 * !pieces_cp(Them, QUEEN)
+                -  28 * mg_value(score) / 25 - 5;
 
     // Analyse the safe enemy's checks which are possible on next move...
     safe  = ~pieces_c(Them);
