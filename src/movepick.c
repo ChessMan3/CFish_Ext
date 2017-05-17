@@ -166,6 +166,7 @@ Move next_move(const Pos *pos)
     st->endMoves = generate_captures(pos, st->cur);
     score_captures(pos);
     st->stage++;
+	/* fallthrough */
 
   case ST_GOOD_CAPTURES:
     while (st->cur < st->endMoves) {
@@ -185,6 +186,7 @@ Move next_move(const Pos *pos)
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_KILLERS:
     st->stage++;
@@ -192,6 +194,7 @@ Move next_move(const Pos *pos)
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_KILLERS_2:
     st->stage++;
@@ -200,19 +203,15 @@ Move next_move(const Pos *pos)
              && move != st->killers[1] && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_QUIET_GEN:
     st->cur = st->endBadCaptures;
     st->endMoves = generate_quiets(pos, st->cur);
     score_quiets(pos);
-	
-    //if (st->depth < 3 * ONE_PLY) {
-    //  ExtMove *goodQuiet = partition(st->cur, st->endMoves);
-    //  insertion_sort(st->cur, goodQuiet);
-   // } else
-   //   insertion_sort(st->cur, st->endMoves);
     partial_insertion_sort(st->cur, st->endMoves, -4000 * st->depth / ONE_PLY);
     st->stage++;
+	/* fallthrough */
 
   case ST_QUIET:
     while (st->cur < st->endMoves) {
@@ -222,7 +221,8 @@ Move next_move(const Pos *pos)
         return move;
     }
     st->stage++;
-    st->cur = (st-1)->endMoves; // Return to bad captures.
+    st->cur = (st-1)->endMoves; // Point to beginning of bad captures
+	/* fallthrough */
 
   case ST_BAD_CAPTURES:
     if (st->cur < st->endBadCaptures)
@@ -242,6 +242,7 @@ Move next_move(const Pos *pos)
       score_captures(pos);
       st->stage++;
     }
+
 
   case ST_QCAPTURES_CHECKS: case ST_REMAINING:
     while (st->cur < st->endMoves) {
