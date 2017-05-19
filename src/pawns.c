@@ -92,6 +92,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
   const int Up    = (Us == WHITE ? DELTA_N  : DELTA_S);
   const int Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
   const int Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
+  const int Them  = (Us == WHITE ? BLACK : WHITE);
 
   Bitboard b, neighbours, stoppers, doubled, supported, phalanx;
   Bitboard lever, leverPush, connected;
@@ -100,7 +101,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
   Score score = SCORE_ZERO;
 
   Bitboard ourPawns   = pieces_cp(Us, PAWN);
-  Bitboard theirPawns = pieces_p(PAWN) ^ ourPawns;
+  Bitboard theirPawns = pieces_cp(Them, PAWN);
 
   e->passedPawns[Us] = e->pawnAttacksSpan[Us] = 0;
   e->kingSquares[Us] = SQ_NONE;
