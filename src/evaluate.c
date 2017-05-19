@@ -132,8 +132,8 @@ static const Score PassedFile[8] = {
   S(-20,-12), S( 1, -8), S( 2, 10), S(  9, 10)
 };
 
-// KingProtector[PieceType-2] * "distance to own king" determines a bonus for each piece.
-const Score KingProtector[] = {S(-3, -5), S(-4, -3), S(-3, 0), S(-1, 1) };
+// KingProtector[PieceType-2] contains a bonus according to distance from king
+const Score KingProtector[] = { S(-3, -5), S(-4, -3), S(-3, 0), S(-1, 1) };
  
 // Assorted bonuses and penalties used by evaluation
 static const Score MinorBehindPawn     = S(16,  0);
@@ -235,6 +235,7 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
 
     mobility[Us] += MobilityBonus[Pt-2][mob];
     
+	// Bonus for this piece as a king protector
        score += KingProtector[Pt-2] * distance(s, square_of(Us, KING));
      
     if (Pt == BISHOP || Pt == KNIGHT) {
@@ -545,7 +546,7 @@ INLINE Score evaluate_passer_pawns(const Pos *pos, EvalInfo *ei, const int Us)
   while (b) {
     Square s = pop_lsb(&b);
 
-    assert(!(pieces_p(Them, PAWN) & forward_bb(Us, s + pawn_push(Us))));
+    assert(!(pieces_cp(Them, PAWN) & forward_bb(Us, s + pawn_push(Us))));
 
     bb = forward_bb(Us, s) & (ei->attackedBy[Them][0] | pieces_c(Them));
     score -= HinderPassedPawn * popcount(bb);
