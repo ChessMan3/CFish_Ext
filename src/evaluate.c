@@ -202,7 +202,7 @@ INLINE void evalinfo_init(const Pos *pos, EvalInfo *ei, const int Us)
   ei->attackedBy[Us][0] = b | ei->attackedBy[Us][PAWN];
  
   // Init our king safety tables only if we are going to use them
-  if (pos_non_pawn_material(Them) >= QueenValueMg)
+  if (pos_non_pawn_material(Them) >= RookValueMg + KnightValueMg)
   {
 	 ei->kingRing[Us] = b;
      if (relative_rank(Us, square_of(Us, KING)) == RANK_1)
@@ -367,7 +367,8 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
                             : king_safety_black(ei->pe, pos, ksq);
 
   // Main king safety evaluation
-  if (ei->kingAttackersCount[Them]) {
+  if (ei->kingAttackersCount[Them] > (1 - piece_count(Them, QUEEN))) 
+  {
     // Find the attacked squares which are defended only by our king...
     undefended =   ei->attackedBy[Them][0]
                 &  ei->attackedBy[Us][KING]
@@ -387,7 +388,8 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
                 + 201 * popcount(undefended)
                 + 143 * (popcount(b) + !!pinned_pieces(pos, Us))
                 - 848 * !pieces_cp(Them, QUEEN)
-                -  28 * mg_value(score) / 25 - 5;
+                -  9 * mg_value(score) / 8
+				+ 40;
 
     // Analyse the safe enemy's checks which are possible on next move...
     safe  = ~pieces_c(Them);
