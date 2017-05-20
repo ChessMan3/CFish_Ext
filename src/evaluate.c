@@ -387,9 +387,9 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
                 + 102 * ei->kingAdjacentZoneAttacksCount[Them]
                 + 201 * popcount(undefended)
                 + 143 * (popcount(b) + !!pinned_pieces(pos, Us))
-                - 848 * !pieces_cp(Them, QUEEN)
-                -  9 * mg_value(score) / 8
-				+ 40;
+                - 848 * !piece_count(Them, QUEEN)
+                -   9 * mg_value(score) / 8
+				+  40;
 
     // Analyse the safe enemy's checks which are possible on next move...
     safe  = ~pieces_c(Them);
