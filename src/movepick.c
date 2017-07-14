@@ -23,18 +23,21 @@
 #include "movepick.h"
 #include "thread.h"
 
-#define HistoryStats_Max ((Value)(1<<28))
+//#define HistoryStats_Max ((Value)(1<<28))
 
-// Our insertion sort, which is guaranteed to be stable, as it should be.
 
-INLINE void insertion_sort(ExtMove *begin, ExtMove *end)
-{
-  ExtMove tmp, *p, *q;
+// partial_insertion_sort() sorts moves in descending order up to and including
+// a given limit. The order of moves smaller than the limit is left unspecified.
 
-  for (p = begin + 1; p < end; p++) {
-    tmp = *p;
-    for (q = p; q != begin && (q-1)->value < tmp.value; --q)
-      *q = *(q-1);
+INLINE void partial_insertion_sort(ExtMove *begin, ExtMove *end, int limit){
+
+  for (ExtMove *sortedEnd = begin, *p = begin + 1; p < end; p++) 
+       if (p->value >= limit)
+  {
+    ExtMove tmp = *p, *q;
+	*p = *++sortedEnd;
+    for (q = sortedEnd; q != begin && (q - 1)->value < tmp.value; --q)
+    *q = *(q - 1);
     *q = tmp;
   }
 }
@@ -104,7 +107,6 @@ static void score_quiets(const Pos *pos)
 {
   Stack *st = pos->st;
   HistoryStats *history = pos->history;
-  FromToStats *fromTo = pos->fromTo;
 
   CounterMoveStats *cmh = (st-1)->counterMoves;
   CounterMoveStats *fmh = (st-2)->counterMoves;
@@ -121,22 +123,21 @@ static void score_quiets(const Pos *pos)
     uint32_t move = m->move & 4095;
     uint32_t to = move & 63;
     uint32_t from = move >> 6;
-    m->value =  (*history)[piece_on(from)][to]
-              + (*cmh)[piece_on(from)][to]
+    m->value =  (*cmh)[piece_on(from)][to]
               + (*fmh)[piece_on(from)][to]
               + (*fmh2)[piece_on(from)][to]
-              + ft_get(*fromTo, c, move);
+              + hs_get(*history, c, move);
   }
 }
+
+static const int HistoryStats_Max = 1 << 28;
 
 static void score_evasions(const Pos *pos)
 {
   Stack *st = pos->st;
-  // Try captures ordered by MVV/LVA, then non-captures ordered by
-  // history value.
+  // Try captures ordered by MVV/LVA, then non-captures ordered by stats heuristics
 
   HistoryStats *history = pos->history;
-  FromToStats *fromTo = pos->fromTo;
   uint32_t c = pos_stm();
 
   for (ExtMove *m = st->cur; m < st->endMoves; m++)
@@ -144,14 +145,13 @@ static void score_evasions(const Pos *pos)
       m->value =  PieceValue[MG][piece_on(to_sq(m->move))]
                 - (Value)type_of_p(moved_piece(m->move)) + HistoryStats_Max;
     else
-      m->value =  (*history)[moved_piece(m->move)][to_sq(m->move)]
-                + ft_get(*fromTo, c, m->move);
+       m->value =  hs_get(*history, c, m->move);
 }
 
 
 // next_move() returns the next pseudo-legal move to be searched.
 
-Move next_move(const Pos *pos)
+Move next_move(const Pos *pos, int skipQuiets)
 {
   Stack *st = pos->st;
   Move move;
@@ -169,6 +169,7 @@ Move next_move(const Pos *pos)
     st->endMoves = generate_captures(pos, st->cur);
     score_captures(pos);
     st->stage++;
+	/* fallthrough */
 
   case ST_GOOD_CAPTURES:
     while (st->cur < st->endMoves) {
@@ -188,6 +189,7 @@ Move next_move(const Pos *pos)
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_KILLERS:
     st->stage++;
@@ -195,6 +197,7 @@ Move next_move(const Pos *pos)
     if (move && move != st->ttMove && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_KILLERS_2:
     st->stage++;
@@ -203,27 +206,28 @@ Move next_move(const Pos *pos)
              && move != st->killers[1] && is_pseudo_legal(pos, move)
              && !is_capture(pos, move))
       return move;
+	  /* fallthrough */
 
   case ST_QUIET_GEN:
     st->cur = st->endBadCaptures;
     st->endMoves = generate_quiets(pos, st->cur);
     score_quiets(pos);
-    if (st->depth < 3 * ONE_PLY) {
-      ExtMove *goodQuiet = partition(st->cur, st->endMoves);
-      insertion_sort(st->cur, goodQuiet);
-    } else
-      insertion_sort(st->cur, st->endMoves);
+    partial_insertion_sort(st->cur, st->endMoves, -4000 * st->depth / ONE_PLY);
     st->stage++;
+	/* fallthrough */
 
   case ST_QUIET:
-    while (st->cur < st->endMoves) {
-      move = (st->cur++)->move;
-      if (   move != st->ttMove && move != st->killers[0]
-          && move != st->killers[1] && move != st->countermove)
-        return move;
-    }
+    while (    st->cur < st->endMoves 
+ 	       && (!skipQuiets || st->cur->value >= VALUE_ZERO))
+ 	{ 
+ 	 move = (st->cur++)->move;
+ 	 if (   move != st->ttMove && move != st->killers[0]
+         && move != st->killers[1]  && move != st->countermove)
+          return move;
+ 	}
     st->stage++;
-    st->cur = (st-1)->endMoves; // Return to bad captures.
+    st->cur = (st-1)->endMoves; // Point to beginning of bad captures
+	/* fallthrough */
 
   case ST_BAD_CAPTURES:
     if (st->cur < st->endBadCaptures)

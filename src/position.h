@@ -85,7 +85,7 @@ struct Stack {
   Move excludedMove;
   Move killers[2];
   Value staticEval;
-  Value history;
+  int history;
   int moveCount;
 
   // MovePicker data
@@ -157,7 +157,6 @@ struct Pos {
   // Pointers to thread-specific tables.
   HistoryStats *history;
   MoveStats *counterMoves;
-  FromToStats *fromTo;
   PawnEntry *pawnTable;
   MaterialEntry *materialTable;
   CounterMoveHistoryStats *counterMoveHistory;
@@ -248,13 +247,13 @@ PURE int is_draw(const Pos *pos);
 // Attacks to/from a given square
 #define attackers_to_occ(s,occ) pos_attackers_to_occ(pos,s,occ)
 #define attackers_to(s) attackers_to_occ(s,pieces())
-#define attacks_from_pawn(s,c) (StepAttacksBB[make_piece(c,PAWN)][s])
-#define attacks_from_knight(s) (StepAttacksBB[KNIGHT][s])
+#define attacks_from_pawn(s,c) (PawnAttacks[c][s])
+#define attacks_from_knight(s) (PseudoAttacks[KNIGHT][s])
 #define attacks_from_bishop(s) attacks_bb_bishop(s, pieces())
 #define attacks_from_rook(s) attacks_bb_rook(s, pieces())
 #define attacks_from_queen(s) (attacks_from_bishop(s)|attacks_from_rook(s))
-#define attacks_from_king(s) (StepAttacksBB[KING][s])
-#define attacks_from(pc,s) attacks_bb(pc,s,pieces())
+#define attacks_from_king(s) (PseudoAttacks[KING][s])
+#define attacks_from(pt,s) attacks_bb(pt,s,pieces())
 
 // Properties of moves
 #define moved_piece(m) (piece_on(from_sq(m)))
@@ -299,6 +298,12 @@ INLINE int advanced_pawn_push(const Pos *pos, Move m)
 {
   return   type_of_p(moved_piece(m)) == PAWN
         && relative_rank_s(pos_stm(), from_sq(m)) > RANK_4;
+}
+
+INLINE int far_advanced_pawn_push(const Pos *pos, Move m)
+{
+  return   type_of_p(moved_piece(m)) == PAWN
+        && relative_rank_s(pos_stm(), from_sq(m)) > RANK_6;
 }
 
 INLINE int opposite_bishops(const Pos *pos)

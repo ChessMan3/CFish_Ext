@@ -59,7 +59,6 @@ extern Bitboard FileBB[8];
 extern Bitboard RankBB[8];
 extern Bitboard AdjacentFilesBB[8];
 extern Bitboard InFrontBB[2][8];
-extern Bitboard StepAttacksBB[16][64];
 extern Bitboard BetweenBB[64][64];
 extern Bitboard LineBB[64][64];
 extern Bitboard DistanceRingBB[64][8];
@@ -67,6 +66,7 @@ extern Bitboard ForwardBB[2][64];
 extern Bitboard PassedPawnMask[2][64];
 extern Bitboard PawnAttackSpan[2][64];
 extern Bitboard PseudoAttacks[8][64];
+extern Bitboard PawnAttacks[2][64];
 
 #ifndef PEDANTIC
 extern Bitboard EPMask[16];
@@ -183,7 +183,7 @@ INLINE Bitboard in_front_bb(unsigned c, unsigned r)
 // forward_bb() returns a bitboard representing all the squares along the
 // line in front of the given one, from the point of view of the given
 // color:
-//        ForwardBB[c][s] = in_front_bb(c, s) & file_bb(s)
+//        ForwardBB[c][s] = in_front_bb(c, rank_of(s)) & file_bb(s)
 
 INLINE Bitboard forward_bb(unsigned c, Square s)
 {
@@ -194,7 +194,7 @@ INLINE Bitboard forward_bb(unsigned c, Square s)
 // pawn_attack_span() returns a bitboard representing all the squares
 // that can be attacked by a pawn of the given color when it moves along
 // its file, starting from the given square:
-//       PawnAttackSpan[c][s] = in_front_bb(c, s) & adjacent_files_bb(s);
+//       PawnAttackSpan[c][s] = in_front_bb(c, rank_of(s)) & adjacent_files_bb(s);
 
 INLINE Bitboard pawn_attack_span(unsigned c, Square s)
 {
@@ -251,9 +251,12 @@ INLINE unsigned distance_r(Square x, Square y)
 #include "bmi2-plain.h"
 #endif
 
-INLINE Bitboard attacks_bb(Piece pc, Square s, Bitboard occupied)
+INLINE Bitboard attacks_bb(Piece pt, Square s, Bitboard occupied)
 {
-  switch (type_of_p(pc)) {
+   assert(pt != PAWN);
+  
+    switch (pt)
+  {
   case BISHOP:
       return attacks_bb_bishop(s, occupied);
   case ROOK:
@@ -261,7 +264,7 @@ INLINE Bitboard attacks_bb(Piece pc, Square s, Bitboard occupied)
   case QUEEN:
       return attacks_bb_bishop(s, occupied) | attacks_bb_rook(s, occupied);
   default:
-      return StepAttacksBB[pc][s];
+      return PseudoAttacks[pt][s];
   }
 }
 

@@ -180,16 +180,16 @@ INLINE int make_castling_right(int c, int s)
 #define VALUE_MATE_IN_MAX_PLY  (VALUE_MATE - 2 * MAX_PLY)
 #define VALUE_MATED_IN_MAX_PLY (-VALUE_MATE + 2 * MAX_PLY)
 
-#define PawnValueMg   188
-#define PawnValueEg   248
-#define KnightValueMg 753
-#define KnightValueEg 832
-#define BishopValueMg 826
-#define BishopValueEg 897
-#define RookValueMg   1285
-#define RookValueEg   1371
-#define QueenValueMg  2513
-#define QueenValueEg  2650
+#define PawnValueMg    188
+#define PawnValueEg    248
+#define KnightValueMg  764
+#define KnightValueEg  848
+#define BishopValueMg  826
+#define BishopValueEg  891
+#define RookValueMg    1282
+#define RookValueEg    1373
+#define QueenValueMg   2526
+#define QueenValueEg   2646
 
 #define MidgameLimit 15258
 #define EndgameLimit 3915
@@ -403,14 +403,13 @@ typedef struct PawnEntry PawnEntry;
 typedef struct MaterialEntry MaterialEntry;
 
 typedef Move MoveStats[16][64];
-typedef Value HistoryStats[16][64];
 typedef Value CounterMoveStats[16][64];
 typedef CounterMoveStats CounterMoveHistoryStats[16][64];
-typedef Value FromToStats[2][4096];
+typedef Value HistoryStats[2][4096];
 
 struct ExtMove {
   Move move;
-  Value value;
+  int value;
 };
 
 typedef struct ExtMove ExtMove;

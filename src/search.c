@@ -51,8 +51,13 @@ Depth TB_ProbeDepth;
 #define NonPV 0
 #define PV    1
 
+// Sizes and phases of the skip-blocks, used for distributing search depths across the threads.
+const int skipSize[]  = { 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
+const int skipPhase[] = { 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7 };
+
 // Razoring and futility margin based on depth
-static const int razor_margin[4] = { 483, 570, 603, 554 };
+// razor_margin[0] is unused as long as depth >= ONE_PLY in search
+static const int razor_margin[] = { 0, 570, 603, 554 };
 
 #define futility_margin(d) ((Value)(150 * (d) / ONE_PLY))
 
@@ -80,8 +85,8 @@ struct Skill {
 //  Move best = 0;
 };
 
-// Easy move code for detecting an 'easy move'. If the PV is stable across
-// multiple search iterations, we can quickly return the best move.
+// EasyMoveManager structure is used to detect an 'easy move'. When the PV is stable
+// across multiple search iterations, we can quickly return the best move.
 
 struct {
   int stableCnt;
@@ -118,42 +123,8 @@ static void easy_move_update(Pos *pos, Move *newPv)
   }
 }
 
-// Set of rows with half bits set to 1 and half to 0. It is used to allocate
-// the search depths across the threads.
-
-#define HalfDensitySize 20
-
-static const int HalfDensity[HalfDensitySize][8] = {
-  {0, 1},
-  {1, 0},
-  {0, 0, 1, 1},
-  {0, 1, 1, 0},
-  {1, 1, 0, 0},
-  {1, 0, 0, 1},
-  {0, 0, 0, 1, 1, 1},
-  {0, 0, 1, 1, 1, 0},
-  {0, 1, 1, 1, 0, 0},
-  {1, 1, 1, 0, 0, 0},
-  {1, 1, 0, 0, 0, 1},
-  {1, 0, 0, 0, 1, 1},
-  {0, 0, 0, 0, 1, 1, 1, 1},
-  {0, 0, 0, 1, 1, 1, 1, 0},
-  {0, 0, 1, 1, 1, 1, 0 ,0},
-  {0, 1, 1, 1, 1, 0, 0 ,0},
-  {1, 1, 1, 1, 0, 0, 0 ,0},
-  {1, 1, 1, 0, 0, 0, 0 ,1},
-  {1, 1, 0, 0, 0, 0, 1 ,1},
-  {1, 0, 0, 0, 0, 1, 1 ,1},
-};
-
-static const int HalfDensityRowSize[HalfDensitySize] = {
-  2, 2,
-  4, 4, 4, 4,
-  6, 6, 6, 6, 6, 6,
-  8, 8, 8, 8, 8, 8, 8, 8
-};
-
 static Value DrawValue[2];
+int variety;
 //static CounterMoveHistoryStats CounterMoveHistory;
 
 static Value search_PV(Pos *pos, Stack *ss, Value alpha, Value beta, Depth depth);
@@ -167,8 +138,8 @@ static Value qsearch_NonPV_false(Pos *pos, Stack *ss, Value alpha, Depth depth);
 static Value value_to_tt(Value v, int ply);
 static Value value_from_tt(Value v, int ply);
 static void update_pv(Move *pv, Move move, Move *childPv);
-static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus);
-static void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets, int quietsCnt, Value bonus);
+static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus);
+static void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets, int quietsCnt, int bonus);
 static void check_time(void);
 static void stable_sort(RootMove *rm, int num);
 static void uci_print_pv(Pos *pos, Depth depth, Value alpha, Value beta);
@@ -183,7 +154,7 @@ void search_init(void)
   for (int imp = 0; imp <= 1; imp++)
     for (int d = 1; d < 64; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = log(d) * log(mc) / 2;
+        double r = log(d) * log(mc) / 1.95;
 
         Reductions[NonPV][imp][d][mc] = ((int)lround(r));
         Reductions[PV][imp][d][mc] = max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -194,8 +165,8 @@ void search_init(void)
       }
 
   for (int d = 0; d < 16; ++d) {
-    FutilityMoveCounts[0][d] = (int)(2.4 + 0.773 * pow(d + 0.00, 1.8));
-    FutilityMoveCounts[1][d] = (int)(2.9 + 1.045 * pow(d + 0.49, 1.8));
+    FutilityMoveCounts[0][d] = (int)(2.4 + 0.74 * pow(d, 1.78));
+    FutilityMoveCounts[1][d] = (int)(5.0 + 1.00 * pow(d, 2.00));
   }
 
   lastInfoTime = now();
@@ -216,7 +187,6 @@ void search_clear()
     Pos *pos = Threads.pos[idx];
     stats_clear(pos->history);
     stats_clear(pos->counterMoves);
-    stats_clear(pos->fromTo);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -275,6 +245,7 @@ void mainthread_search(void)
   Pos *pos = Threads.pos[0];
   int us = pos_stm();
   time_init(us, pos_game_ply());
+  variety = option_value(OPT_VARIETY);
   char buf[16];
 
   int contempt = option_value(OPT_CONTEMPT) * PawnValueEg / 100; // From centipawns
@@ -333,8 +304,7 @@ void mainthread_search(void)
       Pos *p = Threads.pos[idx];
       Depth depthDiff = p->completedDepth - bestThread->completedDepth;
       Value scoreDiff = p->rootMoves->move[0].score - bestThread->rootMoves->move[0].score;
-      if (   (depthDiff > 0 && scoreDiff >= 0)
-          || (scoreDiff > 0 && depthDiff >= 0))
+      if (scoreDiff > 0 && depthDiff >= 0)
         bestThread = p;
     }
   }
@@ -358,10 +328,10 @@ void mainthread_search(void)
 }
 
 
-// thread_search() is the main iterative deepening loop. It calls search()
-// repeatedly with increasing depth until the allocated thinking time has
-// been consumed, the user stops the search, or the maximum search depth is
-// reached.
+/// thread_search() is the main iterative deepening loop. It calls search()
+/// repeatedly with increasing depth until the allocated thinking time has
+/// been consumed, the user stops the search, or the maximum search depth is
+/// reached.
 
 void thread_search(Pos *pos)
 {
@@ -391,6 +361,8 @@ void thread_search(Pos *pos)
   }
 
   int multiPV = option_value(OPT_MULTI_PV);
+   if(option_value(OPT_PV16)) multiPV=16;
+   if(option_value(OPT_PV256)) multiPV=256;
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 
@@ -403,22 +375,20 @@ void thread_search(Pos *pos)
   RootMoves *rm = pos->rootMoves;
   multiPV = min(multiPV, rm->size);
 
-  // Iterative deepening loop until requested to stop or the target depth
-  // is reached.
+  // Iterative deepening loop until requested to stop or the target depth is reached.
   while (   (pos->rootDepth += ONE_PLY) < DEPTH_MAX
          && !Signals.stop
          && (!Limits.depth || threads_main()->rootDepth <= Limits.depth))
   {
-    // Set up the new depths for the helper threads skipping on average every
-    // 2nd ply (using a half-density matrix).
-    if (pos->thread_idx != 0) {
-      int row = (pos->thread_idx - 1) % HalfDensitySize;
-      int col = (pos->rootDepth / ONE_PLY + pos_game_ply())
-                                               % HalfDensityRowSize[row];
-      if (HalfDensity[row][col])
-        continue;
-    }
-
+ 
+    // Distribute search depths across the threads
+     if (pos->thread_idx)
+     {
+         int i = (pos->thread_idx - 1) % 20;
+         if (((pos->rootDepth / ONE_PLY + pos_game_ply() + skipPhase[i]) / skipSize[i]) % 2)
+             continue;
+     }
+	 
     // Age out PV variability metric
     if (pos->thread_idx == 0) {
       mainThread.bestMoveChanges *= 0.505;
@@ -464,7 +434,7 @@ void thread_search(Pos *pos)
         // search the already searched PV lines are preserved.
         stable_sort(&rm->move[PVIdx], PVLast - PVIdx);
 
-        // If search has been stopped, break immediately. Sorting and
+        // If search has been stopped, we break immediately. Sorting and
         // writing PV back to TT is safe because RootMoves is still
         // valid, although it refers to the previous iteration.
         if (Signals.stop)
@@ -548,7 +518,7 @@ void thread_search(Pos *pos)
 
         int doEasyMove =   rm->move[0].pv[0] == easyMove
                          && mainThread.bestMoveChanges < 0.03
-                         && time_elapsed() > time_optimum() * 5 / 42;
+                         && time_elapsed() > time_optimum() * 5 / 44;
 
         if (   rm->size == 1
             || time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628
@@ -676,7 +646,7 @@ static void update_pv(Move *pv, Move move, Move *childPv)
 
 // update_cm_stats() updates countermove and follow-up move history.
 
-static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
+static void update_cm_stats(Stack *ss, Piece pc, Square s, int bonus)
 {
   CounterMoveStats *cmh  = (ss-1)->counterMoves;
   CounterMoveStats *fmh1 = (ss-2)->counterMoves;
@@ -692,11 +662,10 @@ static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
     cms_update(*fmh2, pc, s, bonus);
 }
 
-// update_stats() updates killers, history, countermove and countermove
-// plus follow-up move history when a new quiet best move is found.
+// update_stats() updates move sorting heuristics when a new quiet best move is found
 
 void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
-                  int quietsCnt, Value bonus)
+                  int quietsCnt, int bonus)
 {
   if (ss->killers[0] != move) {
     ss->killers[1] = ss->killers[0];
@@ -704,8 +673,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
   }
 
   int c = pos_stm();
-  ft_update(*pos->fromTo, c, move, bonus);
-  hs_update(*pos->history, moved_piece(move), to_sq(move), bonus);
+  hs_update(*pos->history, c, move, bonus);
   update_cm_stats(ss, moved_piece(move), to_sq(move), bonus);
 
   if ((ss-1)->counterMoves) {
@@ -715,8 +683,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
 
   // Decrease all the other played quiet moves
   for (int i = 0; i < quietsCnt; i++) {
-    ft_update(*pos->fromTo, c, quiets[i], -bonus);
-    hs_update(*pos->history, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
+    hs_update(*pos->history, c, quiets[i], -bonus);
     update_cm_stats(ss, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
   }
 }

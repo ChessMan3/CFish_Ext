@@ -585,7 +585,7 @@ int is_pseudo_legal_old(Pos *pos, Move m)
            && is_empty(to - pawn_push(us))))
       return 0;
   }
-  else if (!(attacks_from(pc, from) & sq_bb(to)))
+  else if (!(attacks_from(type_of_p(pc), from) & sq_bb(to)))
     return 0;
 
   // Evasions generator already takes care to avoid some kind of illegal moves

@@ -71,7 +71,6 @@ void thread_init(void *arg)
     pos->materialTable = numa_alloc(8192 * sizeof(MaterialEntry));
     pos->history = numa_alloc(sizeof(HistoryStats));
     pos->counterMoves = numa_alloc(sizeof(MoveStats));
-    pos->fromTo = numa_alloc(sizeof(FromToStats));
     pos->rootMoves = numa_alloc(sizeof(RootMoves));
     pos->stack = numa_alloc((MAX_PLY + 110) * sizeof(Stack));
     pos->moveList = numa_alloc(10000 * sizeof(ExtMove));
@@ -81,7 +80,6 @@ void thread_init(void *arg)
     pos->materialTable = calloc(8192 * sizeof(MaterialEntry), 1);
     pos->history = calloc(sizeof(HistoryStats), 1);
     pos->counterMoves = calloc(sizeof(MoveStats), 1);
-    pos->fromTo = calloc(sizeof(FromToStats), 1);
     pos->rootMoves = calloc(sizeof(RootMoves), 1);
     pos->stack = calloc((MAX_PLY + 110) * sizeof(Stack), 1);
     pos->moveList = calloc(10000 * sizeof(ExtMove), 1);
@@ -171,7 +169,6 @@ void thread_destroy(Pos *pos)
     numa_free(pos->materialTable, 8192 * sizeof(MaterialEntry));
     numa_free(pos->history, sizeof(HistoryStats));
     numa_free(pos->counterMoves, sizeof(MoveStats));
-    numa_free(pos->fromTo, sizeof(FromToStats));
     numa_free(pos->rootMoves, sizeof(RootMoves));
     numa_free(pos->stack, (MAX_PLY + 110) * sizeof(Stack));
     numa_free(pos->moveList, 10000 * sizeof(ExtMove));
@@ -181,7 +178,6 @@ void thread_destroy(Pos *pos)
     free(pos->materialTable);
     free(pos->history);
     free(pos->counterMoves);
-    free(pos->fromTo);
     free(pos->rootMoves);
     free(pos->stack);
     free(pos->moveList);

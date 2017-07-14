@@ -30,40 +30,32 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
-INLINE void hs_update(HistoryStats hs, Piece pc, Square to, Value v)
+INLINE void hs_update(HistoryStats hs, int c, Move m, int v)
 {
   int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
-
-  hs[pc][to] -= hs[pc][to] * w / 324;
-  hs[pc][to] += ((int)v) * 32;
-}
-
-INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, Value v)
-{
-  int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
-
-  cms[pc][to] -= cms[pc][to] * w / 936;
-  cms[pc][to] += ((int)v) * 32;
-}
-
-INLINE void ft_update(FromToStats ft, int c, Move m, Value v)
-{
-  int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
+  const int D = 324;
+  
+  assert(w <= D); // Consistency check for below formula
 
   m &= 4095;
-  ft[c][m] -= ft[c][m] * w / 324;
-  ft[c][m] += ((int)v) * 32;
+  hs[c][m] -= hs[c][m] * w / D;
+  hs[c][m] += v * 32;
+}
+ 
+INLINE int hs_get(HistoryStats hs, int c, Move m)
+{
+  return hs[c][m & 4095];
 }
 
-INLINE Value ft_get(FromToStats ft, int c, Move m)
+INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, int v)
 {
-  return ft[c][m & 4095];
+  int w = v >= 0 ? v : -v;
+  const int D = 936;
+  
+  assert(w <= D);
+
+  cms[pc][to] -= cms[pc][to] * w / D;
+  cms[pc][to] += v * 32;
 }
 
 #define ST_MAIN_SEARCH             0
@@ -94,7 +86,7 @@ INLINE Value ft_get(FromToStats ft, int c, Move m)
 #define ST_PROBCUT_GEN             20
 #define ST_PROBCUT_2               21
 
-Move next_move(const Pos *pos);
+Move next_move(const Pos *pos, int skipQuiets);
 
 // Initialisation of move picker data.
 
