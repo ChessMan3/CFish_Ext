@@ -292,11 +292,11 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
     }
 
     if (Pt == ROOK) {
-        if (pieces_cp(Us, QUEEN) > 0)
-           score -= Coordination * distance(square_of(Us, ROOK), square_of(Us, QUEEN));
+	    if (pieces_cp(Us, QUEEN) > 0)
+            score -= Coordination * distance(square_of(Us, ROOK), square_of(Us, QUEEN));
 
         if (pieces_cp(Us, QUEEN) > 0)
-           score += Correction;
+            score += Correction;
   
       // Bonus for aligning with enemy pawns on the same rank/file
       if (relative_rank_s(Us, s) >= RANK_5)
