@@ -83,8 +83,8 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
          ss->staticEval = bestValue = evaluate(pos);
 
       // Can ttValue be used as a better position evaluation?
-      if (ttValue != VALUE_NONE)
-        if (tte_bound(tte) & (ttValue > bestValue ? BOUND_LOWER : BOUND_UPPER))
+      if (  ttValue != VALUE_NONE
+        && (tte_bound(tte) & (ttValue > bestValue ? BOUND_LOWER : BOUND_UPPER)))
           bestValue = ttValue;
     } else
       ss->staticEval = bestValue =

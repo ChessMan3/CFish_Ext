@@ -167,8 +167,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       eval = ss->staticEval = evaluate(pos);
 
     // Can ttValue be used as a better position evaluation?
-    if (ttValue != VALUE_NONE)
-      if (tte_bound(tte) & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER))
+    if (  ttValue != VALUE_NONE
+      && (tte_bound(tte) & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttValue;
   } else {
     eval = ss->staticEval =
