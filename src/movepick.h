@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,40 +30,21 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
-INLINE void hs_update(HistoryStats hs, Piece pc, Square to, Value v)
+INLINE void cms_update(PieceToHistory cms, Piece pc, Square to, int v)
 {
   int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
-
-  hs[pc][to] -= hs[pc][to] * w / 324;
-  hs[pc][to] += ((int)v) * 32;
-}
-
-INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, Value v)
-{
-  int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
 
   cms[pc][to] -= cms[pc][to] * w / 936;
-  cms[pc][to] += ((int)v) * 32;
+  cms[pc][to] += v * 32;
 }
 
-INLINE void ft_update(FromToStats ft, int c, Move m, Value v)
+INLINE void history_update(ButterflyHistory history, int c, Move m, int v)
 {
   int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
 
   m &= 4095;
-  ft[c][m] -= ft[c][m] * w / 324;
-  ft[c][m] += ((int)v) * 32;
-}
-
-INLINE Value ft_get(FromToStats ft, int c, Move m)
-{
-  return ft[c][m & 4095];
+  history[c][m] -= history[c][m] * w / 324;
+  history[c][m] += v * 32;
 }
 
 #define ST_MAIN_SEARCH             0
@@ -94,7 +75,7 @@ INLINE Value ft_get(FromToStats ft, int c, Move m)
 #define ST_PROBCUT_GEN             20
 #define ST_PROBCUT_2               21
 
-Move next_move(const Pos *pos);
+Move next_move(const Pos *pos, int skipQuiets);
 
 // Initialisation of move picker data.
 
@@ -108,6 +89,8 @@ INLINE void mp_init(const Pos *pos, Move ttm, Depth depth)
 
   Square prevSq = to_sq((st-1)->currentMove);
   st->countermove = (*pos->counterMoves)[piece_on(prevSq)][prevSq];
+  st->mp_killers[0] = st->killers[0];
+  st->mp_killers[1] = st->killers[1];
 
   st->stage = pos_checkers() ? ST_EVASIONS : ST_MAIN_SEARCH;
   st->ttMove = ttm;
