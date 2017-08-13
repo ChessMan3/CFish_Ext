@@ -254,9 +254,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       &&  abs(beta) < VALUE_MATE_IN_MAX_PLY) {
 
     Value rbeta = min(beta + 200, VALUE_INFINITE);
-    Depth rdepth = depth - 4 * ONE_PLY;
 
-    assert(rdepth >= ONE_PLY);
     assert(move_is_ok((ss-1)->currentMove));
 
     mp_init_pc(pos, ttMove, rbeta - ss->staticEval);
@@ -265,8 +263,9 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
       if (is_legal(pos, move)) {
         ss->currentMove = move;
         ss->history = &(*pos->counterMoveHistory)[moved_piece(move)][to_sq(move)];
+        assert(depth >= 5 * ONE_PLY);
         do_move(pos, move, gives_check(pos, ss, move));
-        value = -search_NonPV(pos, ss+1, -rbeta, rdepth, !cutNode);
+        value = -search_NonPV(pos, ss+1, -rbeta, depth - 4 * ONE_PLY, !cutNode);
         undo_move(pos, move);
         if (value >= rbeta)
           return value;
