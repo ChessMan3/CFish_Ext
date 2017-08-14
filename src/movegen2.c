@@ -394,7 +394,7 @@ ExtMove *generate_evasions(const Pos *pos, ExtMove *list)
 
 
 // generate_legal() generates all the legal moves in the given position
-SMALL
+
 ExtMove *generate_legal(const Pos *pos, ExtMove *list)
 {
   Bitboard pinned = pinned_pieces(pos, pos_stm());

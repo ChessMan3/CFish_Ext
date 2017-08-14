@@ -152,7 +152,7 @@ struct Pos {
   uint64_t nodes;
   uint64_t tb_hits;
   int PVIdx, PVLast;
-  int selDepth;
+  int maxPly;
   Depth rootDepth;
   Depth completedDepth;
 
@@ -202,6 +202,7 @@ PURE Value see_sign(const Pos *pos, Move m);
 PURE Value see_test(const Pos *pos, Move m, int value);
 
 PURE Key key_after(const Pos *pos, Move m);
+PURE int game_phase(const Pos *pos);
 PURE int is_draw(const Pos *pos);
 
 // Position representation
@@ -299,6 +300,12 @@ INLINE int advanced_pawn_push(const Pos *pos, Move m)
 {
   return   type_of_p(moved_piece(m)) == PAWN
         && relative_rank_s(pos_stm(), from_sq(m)) > RANK_4;
+}
+
+INLINE int far_advanced_pawn_push(const Pos *pos, Move m)
+{
+	return   type_of_p(moved_piece(m)) == PAWN
+	&& relative_rank_s(pos_stm(), from_sq(m)) >= RANK_6;
 }
 
 INLINE int opposite_bishops(const Pos *pos)

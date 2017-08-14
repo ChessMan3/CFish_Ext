@@ -24,7 +24,7 @@
 #ifndef USE_POPCNT
 uint8_t PopCnt16[1 << 16];
 #endif
-uint8_t SquareDistance[64][64];
+int SquareDistance[64][64];
 
 static int RookDeltas[] = { DELTA_N,  DELTA_E,  DELTA_S,  DELTA_W  };
 static int BishopDeltas[] = { DELTA_NE, DELTA_SE, DELTA_SW, DELTA_NW };
@@ -49,8 +49,6 @@ static Bitboard sliding_attack(int deltas[], Square sq, Bitboard occupied)
 #include "magic-fancy.c"
 #elif defined(MAGIC_PLAIN)
 #include "magic-plain.c"
-#elif defined(MAGIC_BLACK)
-#include "magic-black.c"
 #elif defined(BMI2_FANCY)
 #include "bmi2-fancy.c"
 #elif defined(BMI2_PLAIN)
@@ -61,11 +59,11 @@ Bitboard SquareBB[64];
 Bitboard FileBB[8];
 Bitboard RankBB[8];
 Bitboard AdjacentFilesBB[8];
-Bitboard ForwardRanksBB[2][8];
+Bitboard InFrontBB[2][8];
 Bitboard BetweenBB[64][64];
 Bitboard LineBB[64][64];
 Bitboard DistanceRingBB[64][8];
-Bitboard ForwardFileBB[2][64];
+Bitboard ForwardBB[2][64];
 Bitboard PassedPawnMask[2][64];
 Bitboard PawnAttackSpan[2][64];
 Bitboard PseudoAttacks[8][64];
@@ -93,26 +91,6 @@ static int MSBTable[256];            // To implement software msb()
 static Square BSFTable[64];          // To implement software bitscan
 #endif
 
-// bsf_index() returns the index into BSFTable[] to look up the bitscan. Uses
-// Matt Taylor's folding for 32 bit case, extended to 64 bit by Kim Walisch.
-
-INLINE unsigned bsf_index(Bitboard b)
-{
-  b ^= b - 1;
-  return Is64Bit ? (b * DeBruijn64) >> 58
-                 : ((((unsigned)b) ^ (unsigned)(b >> 32)) * DeBruijn32) >> 26;
-}
-
-
-// popcount16() counts the non-zero bits using SWAR-Popcount algorithm.
-
-INLINE unsigned popcount16(unsigned u)
-{
-  u -= (u >> 1) & 0x5555U;
-  u = ((u >> 2) & 0x3333U) + (u & 0x3333U);
-  u = ((u >> 4) + u) & 0x0F0FU;
-  return (u * 0x0101U) >> 8;
-}
 
 
 #ifdef NO_BSF
@@ -203,13 +181,13 @@ void bitboards_init()
     AdjacentFilesBB[f] = (f > FILE_A ? FileBB[f - 1] : 0) | (f < FILE_H ? FileBB[f + 1] : 0);
 
   for (int r = 0; r < 7; r++)
-    ForwardRanksBB[WHITE][r] = ~(ForwardRanksBB[BLACK][r + 1] = ForwardRanksBB[BLACK][r] | RankBB[r]);
+    InFrontBB[WHITE][r] = ~(InFrontBB[BLACK][r + 1] = InFrontBB[BLACK][r] | RankBB[r]);
 
   for (int c = 0; c < 2; c++)
     for (Square s = 0; s < 64; s++) {
-      ForwardFileBB[c][s]  = ForwardRanksBB[c][rank_of(s)] & FileBB[file_of(s)];
-      PawnAttackSpan[c][s] = ForwardRanksBB[c][rank_of(s)] & AdjacentFilesBB[file_of(s)];
-      PassedPawnMask[c][s] = ForwardFileBB[c][s] | PawnAttackSpan[c][s];
+      ForwardBB[c][s]      = InFrontBB[c][rank_of(s)] & FileBB[file_of(s)];
+      PawnAttackSpan[c][s] = InFrontBB[c][rank_of(s)] & AdjacentFilesBB[file_of(s)];
+      PassedPawnMask[c][s] = ForwardBB[c][s] | PawnAttackSpan[c][s];
     }
 
   for (Square s1 = 0; s1 < 64; s1++)

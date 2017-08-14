@@ -54,10 +54,17 @@ void position(Pos *pos, char *str)
     moves += 5;
   }
 
-  if (strncmp(str, "fen", 3) == 0) {
+  if (strncmp(str, "fen", 3) == 0)
+	{
     strncpy(fen, str + 4, 127);
     fen[127] = 0;
-  } else if (strncmp(str, "startpos", 8) == 0)
+	}
+  else if (strncmp(str, "f", 1) == 0)
+  {
+	  strncpy(fen, str + 2, 127);
+	  fen[127] = 0;
+  }
+  else if (strncmp(str, "startpos", 8) == 0)
     strcpy(fen, StartFEN);
   else
     return;
@@ -172,7 +179,8 @@ void go(Pos *pos, char *str)
   Limits.nodes = 0;
 
   for (token = strtok(str, " \t"); token; token = strtok(NULL, " \t")) {
-    if (strcmp(token, "searchmoves") == 0)
+    if (strcmp(token, "searchmoves") == 0
+		|| strcmp(token, "sm") == 0)
       while ((token = strtok(NULL, " \t")))
         Limits.searchmoves[Limits.num_searchmoves++] = uci_to_move(pos, token);
     else if (strcmp(token, "wtime") == 0)
@@ -185,15 +193,18 @@ void go(Pos *pos, char *str)
       Limits.inc[BLACK] = atoi(strtok(NULL, " \t"));
     else if (strcmp(token, "movestogo") == 0)
       Limits.movestogo = atoi(strtok(NULL, " \t"));
-    else if (strcmp(token, "depth") == 0)
+    else if (strcmp(token, "depth") == 0
+			 || strcmp(token, "d") == 0)
       Limits.depth = atoi(strtok(NULL, " \t"));
     else if (strcmp(token, "nodes") == 0)
       Limits.nodes = atoi(strtok(NULL, " \t"));
     else if (strcmp(token, "movetime") == 0)
       Limits.movetime = atoi(strtok(NULL, " \t"));
-    else if (strcmp(token, "mate") == 0)
+    else if (strcmp(token, "mate") == 0
+			 || strcmp(token, "m") == 0)
       Limits.mate = atoi(strtok(NULL, " \t"));
-    else if (strcmp(token, "infinite") == 0)
+    else if (strcmp(token, "infinite") == 0
+			 || strcmp(token, "i") == 0)
       Limits.infinite = 1;
     else if (strcmp(token, "ponder") == 0)
       Limits.ponder = 1;
@@ -261,7 +272,7 @@ void uci_loop(int argc, char **argv)
 
   do {
     if (argc == 1 && !getline(&cmd, &buf_size, stdin))
-      strcpy(cmd, "quit");
+	strcpy(cmd, "quit");
 
     if (cmd[strlen(cmd) - 1] == '\n')
       cmd[strlen(cmd) - 1] = 0;
@@ -286,7 +297,10 @@ void uci_loop(int argc, char **argv)
     // already ran out of time), otherwise we should continue searching but
     // switching from pondering to normal search.
     if (   strcmp(token, "quit") == 0
-        || strcmp(token, "stop") == 0) {
+        || strcmp(token, "stop") == 0
+		|| strcmp(token, "q") == 0
+		|| strcmp(token, "?") == 0
+		) {
       if (Signals.searching) {
         Signals.stop = 1;
         LOCK(Signals.lock);
@@ -325,12 +339,16 @@ void uci_loop(int argc, char **argv)
       printf("readyok\n");
       fflush(stdout);
     }
-    else if (strcmp(token, "go") == 0)        go(&pos, str);
-    else if (strcmp(token, "position") == 0)  position(&pos, str);
-    else if (strcmp(token, "setoption") == 0) setoption(str);
+    else if (strcmp(token, "go") == 0
+			 || strcmp(token, "g") == 0)      go(&pos, str);
+    else if (strcmp(token, "position") == 0
+			 || strcmp(token, "p") == 0)  position(&pos, str);
+    else if (strcmp(token, "setoption") == 0
+			 || strcmp(token, "so") == 0) setoption(str);
 
     // Additional custom non-UCI commands, useful for debugging
-    else if (strcmp(token, "bench") == 0)     benchmark(&pos, str);
+    else if (strcmp(token, "bench") == 0
+			 || strcmp(token, "b") == 0)     benchmark(&pos, str);
     else if (strcmp(token, "d") == 0)         print_pos(&pos);
     else if (strcmp(token, "perft") == 0) {
       sprintf(str_buf, "%d %d %d current perft", option_value(OPT_HASH),
@@ -342,8 +360,7 @@ void uci_loop(int argc, char **argv)
       fflush(stdout);
     }
   } while (argc == 1 && strcmp(token, "quit") != 0);
-
-  if (Signals.searching)
+    if (Signals.searching)
     thread_wait_for_search_finished(threads_main());
 
   free(cmd);
@@ -351,6 +368,7 @@ void uci_loop(int argc, char **argv)
   free(pos.moveList);
 
   LOCK_DESTROY(Signals.lock);
+
 }
 
 

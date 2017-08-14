@@ -86,6 +86,7 @@ static void on_largepages(Option *opt)
 #define MAXHASHMB 2048
 #endif
 
+
 static Option options_map[] = {
   { "Debug Log File", OPT_TYPE_STRING, 0, 0, 0, "<empty>", on_logger, 0, NULL },
   { "Contempt", OPT_TYPE_SPIN, 0, -100, 100, NULL, NULL, 0, NULL },
@@ -105,9 +106,13 @@ static Option options_map[] = {
   { "SyzygyProbeDepth", OPT_TYPE_SPIN, 1, 1, 100, NULL, NULL, 0, NULL },
   { "Syzygy50MoveRule", OPT_TYPE_CHECK, 1, 0, 0, NULL, NULL, 0, NULL },
   { "SyzygyProbeLimit", OPT_TYPE_SPIN, 6, 0, 6, NULL, NULL, 0, NULL },
-  { "LargePages", OPT_TYPE_CHECK, 1, 0, 0, NULL, on_largepages, 0, NULL },
+  { "LargePages", OPT_TYPE_CHECK, 0, 0, 0, NULL, on_largepages, 0, NULL },
   { "NUMA", OPT_TYPE_STRING, 0, 0, 0, "all", on_numa, 0, NULL },
-  { NULL }
+  { "Fast_Play", OPT_TYPE_CHECK, 1, 0, 1, NULL, on_clear_hash, 0, NULL },
+  { "UCI_Limit_Strength", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
+  { "UCI_Elo",OPT_TYPE_SPIN, 1200, 1200, 2800, NULL, NULL, 0, NULL },
+  { "UCI_Elo_Delay", OPT_TYPE_CHECK, 0, 0, 0, NULL, NULL, 0, NULL },
+  {NULL}
 };
 
 

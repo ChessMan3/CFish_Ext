@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>   // For std::memset
+#include <unistd.h> //for sleep
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -155,6 +156,7 @@ static void uci_print_pv(Pos *pos, Depth depth, Value alpha, Value beta);
 static int extract_ponder_from_tt(RootMove *rm, Pos *pos);
 
 static TimePoint lastInfoTime;
+double threadcount;
 
 // search_init() is called during startup to initialize various lookup tables
 
@@ -163,7 +165,8 @@ void search_init(void)
   for (int imp = 0; imp <= 1; imp++)
     for (int d = 1; d < 64; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = log(d) * log(mc) / 1.95;
+        //double r = log(d) * log(mc) / 1.95;
+		double r = 0.2 * d * (1.0 - exp(-9.0 / d)) * log(mc) * log (2.718281828 + (threadcount - 1)/50);
 
         Reductions[NonPV][imp][d][mc] = ((int)lround(r));
         Reductions[PV][imp][d][mc] = max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -272,6 +275,25 @@ void mainthread_search(void)
     fflush(stdout);
     IO_UNLOCK;
   } else {
+	  
+
+	  
+	  
+	  if (option_value(OPT_UCI_LIMIT_STRENGTH))
+	  {
+		  int uci_elo = option_value(OPT_UCI_ELO);
+		  int lower_elo = uci_elo - 100;
+		  int upper_elo = uci_elo + 100;
+		  
+		  int use_rating = rand() % (upper_elo - lower_elo ) + lower_elo;
+		  int NodesToSearch   = pow(1.0069555500567,(((use_rating)/1200) -1 )
+									+ (use_rating - 1200)) * 64 ;
+		  Limits.nodes = NodesToSearch;
+		  
+		  
+		  if (option_value(OPT_UCI_ELO_DELAY))
+			  sleep (time_optimum()/1000);
+	  }  
     for (int idx = 1; idx < Threads.num_threads; idx++)
       thread_start_searching(Threads.pos[idx], 0);
 
@@ -428,8 +450,6 @@ void thread_search(Pos *pos)
         pos->PVLast = PVLast;
       }
 
-      pos->selDepth = 0;
-
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
         delta = (Value)18;
@@ -480,7 +500,7 @@ void thread_search(Pos *pos)
             Signals.stopOnPonderhit = 0;
           }
         } else if (bestValue >= beta) {
-//          alpha = (alpha + beta) / 2;
+          alpha = (alpha + beta) / 2;
           beta = min(bestValue + delta, VALUE_INFINITE);
         } else
           break;
@@ -798,7 +818,7 @@ static void uci_print_pv(Pos *pos, Depth depth, Value alpha, Value beta)
     }
 
     printf("info depth %d seldepth %d multipv %d score %s",
-           d / ONE_PLY, rm->move[i].selDepth, (int)i + 1, uci_value(buf, v));
+           d / ONE_PLY, pos->maxPly, (int)i + 1, uci_value(buf, v));
 
     if (!tb && i == PVIdx)
       printf("%s", v >= beta ? " lowerbound" : v <= alpha ? " upperbound" : "");
@@ -927,7 +947,7 @@ void start_thinking(Pos *root)
 
   for (int idx = 0; idx < Threads.num_threads; idx++) {
     Pos *pos = Threads.pos[idx];
-    pos->selDepth = 0;
+    pos->maxPly = 0;
     pos->rootDepth = DEPTH_ZERO;
     pos->nodes = pos->tb_hits = 0;
     RootMoves *rm = pos->rootMoves;
@@ -936,7 +956,6 @@ void start_thinking(Pos *root)
       rm->move[i].pv[0] = list[i].move;
       rm->move[i].score = -VALUE_INFINITE;
       rm->move[i].previousScore = -VALUE_INFINITE;
-      rm->move[i].selDepth = 0;
       rm->move[i].TBRank = list[i].value;
     }
     memcpy(pos, root, offsetof(Pos, moveList));

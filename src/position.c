@@ -423,6 +423,23 @@ void pos_fen(const Pos *pos, char *str)
 }
 
 
+// game_phase() calculates the game phase interpolating total non-pawn
+// material between endgame and midgame limits.
+
+int game_phase(const Pos *pos)
+{
+  Value npm = pos_non_pawn_material(WHITE) + pos_non_pawn_material(BLACK);
+
+  if (npm > MidgameLimit)
+      npm = MidgameLimit;
+
+  if (npm < EndgameLimit)
+      npm = EndgameLimit;
+
+  return ((npm - EndgameLimit) * PHASE_MIDGAME) / (MidgameLimit - EndgameLimit);
+}
+
+
 // Turning slider_blockers() into an inline function was slower, even
 // though it should only add a single slightly optimised copy to evaluate().
 #if 1
@@ -1396,7 +1413,7 @@ int see_test(Pos *pos, Move m, int value)
 // is_draw() tests whether the position is drawn by 50-move rule or by
 // repetition. It does not detect stalemates.
 
-__attribute__((optimize("Os")))
+//__attribute__((optnone))
 int is_draw(const Pos *pos)
 {
   Stack *st = pos->st;

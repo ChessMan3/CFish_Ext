@@ -30,7 +30,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   int ttHit, inCheck, givesCheck, singularExtensionNode, improving;
   int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
   int ttCapture;
-  Piece movedPiece;
+  Piece moved_piece;
   int moveCount, quietCount;
 
   // Step 1. Initialize node
@@ -53,8 +53,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   }
 
   // Used to send selDepth info to GUI
-  if (PvNode && pos->selDepth < ss->ply)
-    pos->selDepth = ss->ply;
+  if (PvNode && pos->maxPly < ss->ply)
+    pos->maxPly = ss->ply;
 
   if (!rootNode) {
     // Step 2. Check for aborted search and immediate draw
@@ -234,6 +234,9 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
 
       if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
          return nullValue;
+		
+	  if (pos_non_pawn_material(pos_stm()) <=  BishopValueEg)
+		  R =  min(R/2, 3 * ONE_PLY);
 
       // Do verification search at high depths
       ss->skipEarlyPruning = 1;
@@ -351,7 +354,7 @@ moves_loop: // When in check search starts from here.
 
     extension = DEPTH_ZERO;
     captureOrPromotion = is_capture_or_promotion(pos, move);
-    movedPiece = moved_piece(move);
+    moved_piece = moved_piece(move);
 
     givesCheck = gives_check(pos, ss, move);
 
@@ -394,6 +397,10 @@ moves_loop: // When in check search starts from here.
              && !moveCountPruning
              &&  see_test(pos, move, 0))
       extension = ONE_PLY;
+	else if ( far_advanced_pawn_push(pos, move)
+			  && !moveCountPruning
+			  && pos_non_pawn_material(pos_stm()) <=  BishopValueEg)
+	  extension = ONE_PLY;
 
     // Calculate new depth for this move
     newDepth = depth - ONE_PLY + extension;
@@ -420,8 +427,8 @@ moves_loop: // When in check search starts from here.
 
         // Countermoves based pruning
         if (   lmrDepth < 3
-            && (*cmh )[movedPiece][to_sq(move)] < CounterMovePruneThreshold
-            && (*fmh )[movedPiece][to_sq(move)] < CounterMovePruneThreshold)
+            && (*cmh )[moved_piece][to_sq(move)] < CounterMovePruneThreshold
+            && (*fmh )[moved_piece][to_sq(move)] < CounterMovePruneThreshold)
           continue;
 
         // Futility pruning: parent node
@@ -460,7 +467,7 @@ moves_loop: // When in check search starts from here.
     // Update the current move (this must be done after singular extension
     // search)
     ss->currentMove = move;
-    ss->history = &(*pos->counterMoveHistory)[movedPiece][to_sq(move)];
+    ss->history = &(*pos->counterMoveHistory)[moved_piece][to_sq(move)];
 
     // Step 14. Make the move.
     do_move(pos, move, givesCheck);
@@ -493,9 +500,9 @@ moves_loop: // When in check search starts from here.
                  && !see_test(pos, make_move(to_sq(move), from_sq(move)), 0))
           r -= 2 * ONE_PLY;
 
-        ss->statScore =  (*cmh )[movedPiece][to_sq(move)]
-                       + (*fmh )[movedPiece][to_sq(move)]
-                       + (*fmh2)[movedPiece][to_sq(move)]
+        ss->statScore =  (*cmh )[moved_piece][to_sq(move)]
+                       + (*fmh )[moved_piece][to_sq(move)]
+                       + (*fmh2)[moved_piece][to_sq(move)]
                        + (*pos->history)[pos_stm() ^ 1][from_to(move)]
                        - 4000; // Correction factor.
 
@@ -564,7 +571,6 @@ moves_loop: // When in check search starts from here.
       // PV move or new best move ?
       if (moveCount == 1 || value > alpha) {
         rm->score = value;
-        rm->selDepth = pos->selDepth;
         rm->pv_size = 1;
 
         assert((ss+1)->pv);
