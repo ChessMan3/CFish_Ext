@@ -416,7 +416,8 @@ moves_loop: // When in check search starts from here.
         }
 
         // Reduced depth of the next LMR search
-        int lmrDepth = max(newDepth - reduction(improving, depth, moveCount, NT), DEPTH_ZERO) / ONE_PLY;
+        int mch = max(1, moveCount - (ss-1)->moveCount / 16);
+        int lmrDepth = max(newDepth - reduction(improving, depth, mch, NT), DEPTH_ZERO) / ONE_PLY;
 
         // Countermoves based pruning
         if (   lmrDepth < 3
@@ -473,7 +474,8 @@ moves_loop: // When in check search starts from here.
         &&  moveCount > 1
         && (!captureOrPromotion || moveCountPruning))
     {
-      Depth r = reduction(improving, depth, moveCount, NT);
+      int mch = max(1, moveCount - (ss-1)->moveCount / 16);
+      Depth r = reduction(improving, depth, mch, NT);
       if (captureOrPromotion)
         r -= r ? ONE_PLY : DEPTH_ZERO;
       else {
