@@ -316,7 +316,9 @@ void mainthread_search(void)
       Pos *p = Threads.pos[idx];
       Depth depthDiff = p->completedDepth - bestThread->completedDepth;
       Value scoreDiff = p->rootMoves->move[0].score - bestThread->rootMoves->move[0].score;
-      if (scoreDiff > 0 && depthDiff >= 0)
+      // Select the thread with the best score, always if it is a mate
+      if (    scoreDiff > 0
+          && (depthDiff >= 0 || p->rootMoves->move[0].score >= VALUE_MATE_IN_MAX_PLY))
         bestThread = p;
     }
   }
@@ -493,10 +495,8 @@ void thread_search(Pos *pos)
       // Sort the PV lines searched so far and update the GUI
       stable_sort(&rm->move[PVFirst], PVIdx - PVFirst + 1);
 
-      if (pos->thread_idx != 0)
-        continue;
-
-      if (Signals.stop || PVIdx + 1 == multiPV || time_elapsed() > 3000) {
+      if (pos->thread_idx = 0
+      && (Signals.stop || PVIdx + 1 == multiPV || time_elapsed() > 3000)) {
         IO_LOCK;
         uci_print_pv(pos, pos->rootDepth, alpha, beta);
         IO_UNLOCK;
@@ -506,6 +506,12 @@ void thread_search(Pos *pos)
     if (!Signals.stop)
       pos->completedDepth = pos->rootDepth;
 
+      // Have we found a "mate in x"?
+    if (   Limits.mate
+        && bestValue >= VALUE_MATE_IN_MAX_PLY
+        && VALUE_MATE - bestValue <= 2 * Limits.mate)
+      Signals.stop = 1;
+  
     if (pos->thread_idx != 0)
       continue;
 
@@ -514,12 +520,6 @@ void thread_search(Pos *pos)
     if (skill.enabled() && skill.time_to_pick(thread->rootDepth))
       skill.pick_best(multiPV);
 #endif
-
-    // Have we found a "mate in x"?
-    if (   Limits.mate
-        && bestValue >= VALUE_MATE_IN_MAX_PLY
-        && VALUE_MATE - bestValue <= 2 * Limits.mate)
-      Signals.stop = 1;
 
     // Do we have time for the next iteration? Can we stop searching now?
     if (use_time_management()) {
