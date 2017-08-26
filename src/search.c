@@ -495,7 +495,7 @@ void thread_search(Pos *pos)
       // Sort the PV lines searched so far and update the GUI
       stable_sort(&rm->move[PVFirst], PVIdx - PVFirst + 1);
 
-      if (pos->thread_idx = 0
+      if (pos->thread_idx == 0
       && (Signals.stop || PVIdx + 1 == multiPV || time_elapsed() > 3000)) {
         IO_LOCK;
         uci_print_pv(pos, pos->rootDepth, alpha, beta);
