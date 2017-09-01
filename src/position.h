@@ -86,7 +86,11 @@ struct Stack {
   Move killers[2];
   Value staticEval;
   Value statScore;
+  Depth newDepth;	
   int moveCount;
+  int rHist;
+  uint8_t forcedMove;
+  uint8_t forcingTree;
 
   // MovePicker data
   Move countermove;
@@ -152,7 +156,7 @@ struct Pos {
   uint64_t nodes;
   uint64_t tb_hits;
   int PVIdx, PVLast;
-  int selDepth;
+  int selDepth, meanH;
   Depth rootDepth;
   Depth completedDepth;
 
@@ -299,6 +303,12 @@ INLINE int advanced_pawn_push(const Pos *pos, Move m)
 {
   return   type_of_p(moved_piece(m)) == PAWN
         && relative_rank_s(pos_stm(), from_sq(m)) > RANK_4;
+}
+
+INLINE int far_advanced_pawn_push(const Pos *pos, Move m)
+{
+	return   type_of_p(moved_piece(m)) == PAWN
+	&& relative_rank_s(pos_stm(), from_sq(m)) >= RANK_6;
 }
 
 INLINE int opposite_bishops(const Pos *pos)
