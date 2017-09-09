@@ -48,7 +48,7 @@ static const Score Lever[8] = {
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawns or our pawn is behind our king.
-static const Value ShelterWeakness[][4][8] = {
+static const Value ShelterWeakness[][(int)8 / 2][8] = {
   { { V( 97), V(17), V( 9), V(44), V( 84), V( 87), V( 99) },
     { V(106), V( 6), V(33), V(86), V( 87), V(104), V(112) },
     { V(101), V( 2), V(65), V(98), V( 58), V( 89), V(115) },

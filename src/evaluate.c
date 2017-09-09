@@ -161,7 +161,7 @@ static const Score TrappedBishopA1H1 = S(50, 50);
 #undef V
 
 // KingAttackWeights[PieceType] contains king attack weights by piece type
-static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
+static const int KingAttackWeights[8] = { 0, 5, 78, 56, 45, 11 };
 
 // Penalties for enemy's safe checks
 #define QueenCheck        780
@@ -205,7 +205,9 @@ INLINE void evalinfo_init(const Pos *pos, EvalInfo *ei, const int Us)
     if (relative_rank_s(Us, square_of(Us, KING)) == RANK_1)
       ei->kingRing[Us] |= shift_bb(Up, b);
     ei->kingAttackersCount[Them] = popcount(b & ei->pe->pawnAttacks[Them]);
-    ei->kingAdjacentZoneAttacksCount[Them] = ei->kingAttackersWeight[Them] = 0;
+    //ei->kingAdjacentZoneAttacksCount[Them] = ei->kingAttackersWeight[Them] = 0;
+    ei->kingAttackersWeight[Them] = ei->kingAttackersCount[Them] * KingAttackWeights[PAWN];
+    ei->kingAdjacentZoneAttacksCount[Them] = 0;
   }
   else
     ei->kingRing[Us] = ei->kingAttackersCount[Them] = 0;
