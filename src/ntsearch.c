@@ -225,6 +225,8 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if (   !PvNode
       &&  eval >= beta
       && (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
+      &&  pos->selDepth + 5 > pos->rootDepth / ONE_PLY
+      && !(depth > 12 * ONE_PLY && pos->moveList < 4)
       &&  pos_non_pawn_material(pos_stm())) {
 
     assert(eval - beta >= 0);
