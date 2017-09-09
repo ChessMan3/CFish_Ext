@@ -155,7 +155,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
         if (    b == BOUND_EXACT
             || (b == BOUND_LOWER ? value >= beta : value <= alpha))
         {
-          tte_save(tte, posKey, value_to_tt(value, ss->ply), BOUND_EXACT,
+          tte_save(tte, posKey, value_to_tt(value, ss->ply), b,
                  min(DEPTH_MAX - ONE_PLY, depth + 6 * ONE_PLY),
                  0, VALUE_NONE, tt_generation());
 
@@ -490,12 +490,15 @@ moves_loop: // When in check search starts from here.
         &&  moveCount > 1
         && (!captureOrPromotion || moveCountPruning))
     {
-      int mch = max(1, moveCount - (ss-1)->moveCount / 16);
-      Depth r = reduction(improving, depth, mch, NT);
+      Depth r = reduction(improving, depth, moveCount, NT);
 
       if (captureOrPromotion)
         r -= r ? ONE_PLY : DEPTH_ZERO;
       else {
+        // Decrease reduction if opponent's move count is high
+        if ((ss-1)->moveCount > 15)
+          r -= ONE_PLY;
+
         // Increase reduction if ttMove is a capture
         if (ttCapture)
           r += ONE_PLY;
