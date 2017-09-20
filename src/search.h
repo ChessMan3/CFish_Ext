@@ -38,8 +38,7 @@ struct RootMove {
   Value score;
   Value previousScore;
   int selDepth;
-  int TBRank;
-  Value TBScore;
+  Value TBRank;
   Move pv[MAX_PLY];
 };
 
