@@ -29,7 +29,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   Value bestValue, value, ttValue, eval, maxValue;
   int ttHit, inCheck, givesCheck, singularExtensionNode, improving;
   int captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
-  int ttCapture;
+  int ttCapture, pvExact;
   Piece movedPiece;
   int moveCount, quietCount;
 
@@ -339,6 +339,7 @@ moves_loop: // When in check search starts from here.
                          &&  tte_depth(tte) >= depth - 3 * ONE_PLY;
   skipQuiets = 0;
   ttCapture = 0;
+  pvExact = PvNode && ttHit && tte_bound(tte) == BOUND_EXACT;
 
   // Step 11. Loop through moves
   // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
@@ -509,6 +510,10 @@ moves_loop: // When in check search starts from here.
         if ((ss-1)->moveCount > 15)
           r -= ONE_PLY;
 
+        // Decrease reduction for exact PV nodes
+        if (pvExact)
+          r -= ONE_PLY;
+
         // Increase reduction if ttMove is a capture
         if (ttCapture)
           r += ONE_PLY;
@@ -532,10 +537,10 @@ moves_loop: // When in check search starts from here.
                        - 4000; // Correction factor.
 
         // Decrease/increase reduction by comparing with opponent's stat score.
-        if (ss->statScore > 0 && (ss-1)->statScore < 0)
+        if (ss->statScore >= 0 && (ss-1)->statScore < 0)
           r -= ONE_PLY;
 
-        else if (ss->statScore < 0 && (ss-1)->statScore > 0)
+        else if ((ss-1)->statScore >= 0 && ss->statScore < 0)
           r += ONE_PLY;
 
         // Decrease/increase reduction for moves with a good/bad history.
