@@ -176,7 +176,11 @@ Value name_NT_InCheck(qsearch)(Pos* pos, Stack* ss, Value alpha, BETA_ARG
     undo_move(pos, move);
 
     assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
-
+	int variety;
+	variety = option_value(OPT_VARIETY);
+	//Add a little variety to play
+    if (variety && value + (variety * 5 * PawnValueEg / 100) >= 0 )
+		value += rand() % (variety * 5);	
     // Check for a new best move
     if (value > bestValue) {
       bestValue = value;
