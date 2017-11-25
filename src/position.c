@@ -680,7 +680,7 @@ int is_pseudo_legal(const Pos *pos, Move m)
     if (!((between_bb(lsb(pos_checkers()), square_of(us, KING))
                                       | pos_checkers()) & sq_bb(to)))
       return 0;
-  }
+	  }
   return 1;
 }
 

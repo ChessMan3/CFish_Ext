@@ -9,7 +9,7 @@
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+Stockfish is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -65,11 +65,11 @@ static const int razor_margin[4] = { 0, 570, 603, 554 };
 
 // Futility and reductions lookup tables, initialized at startup
 static int FutilityMoveCounts[2][16]; // [improving][depth]
-static int Reductions[2][2][64][64];  // [pv][improving][depth][moveNumber]
+static int Reductions[2][2][128][64];  // [pv][improving][depth][moveNumber]
 
 INLINE Depth reduction(int i, Depth d, int mn, const int NT)
 {
-  return Reductions[NT][i][min(d / ONE_PLY, 63)][min(mn, 63)] * ONE_PLY;
+  return Reductions[NT][i][min(d / ONE_PLY, 127)][min(mn, 63)] * ONE_PLY;
 }
 
 // History and stats update bonus, based on depth
@@ -124,9 +124,9 @@ static TimePoint lastInfoTime;
 void search_init(void)
 {
   for (int imp = 0; imp <= 1; imp++)
-    for (int d = 1; d < 64; ++d)
+    for (int d = 1; d < 128; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = log(d) * log(mc) / 1.95;
+        double r = 0.2 * d * (1.0 - exp(-9.0 / d)) * log(mc);
 
         Reductions[NonPV][imp][d][mc] = ((int)lround(r));
         Reductions[PV][imp][d][mc] = max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -154,8 +154,8 @@ void search_clear()
     return;
   }
 
-  Time.availableNodes = 0;
-
+  Time.availableNodes = 0;  
+  
   tt_clear();
   for (int i = 0; i < num_cmh_tables; i++)
     if (cmh_tables[i]) {
@@ -169,7 +169,7 @@ void search_clear()
     Pos *pos = Threads.pos[idx];
     stats_clear(pos->counterMoves);
     stats_clear(pos->history);
-    stats_clear(pos->captureHistory);
+	stats_clear(pos->captureHistory);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -280,7 +280,7 @@ void mainthread_search(void)
 
   // Check if there are threads with a better score than main thread
   Pos *bestThread = pos;
-  if (    option_value(OPT_MULTI_PV) == 1
+  if (   option_value(OPT_MULTI_PV) == 1
       && !Limits.depth
 //      && !Skill(option_value(OPT_SKILL_LEVEL)).enabled()
       &&  pos->rootMoves->move[0].pv[0] != 0)
@@ -322,7 +322,7 @@ void mainthread_search(void)
 
 void thread_search(Pos *pos)
 {
-  Value bestValue, alpha, beta, delta;
+  Value bestValue, alpha, beta, delta1, delta2;
   Move lastBestMove = 0;
   Depth lastBestMoveDepth = DEPTH_ZERO;
   double timeReduction = 1.0;
@@ -340,7 +340,7 @@ void thread_search(Pos *pos)
     ss[i].skipEarlyPruning = 0;
   }
 
-  bestValue = delta = alpha = -VALUE_INFINITE;
+  bestValue = delta1 = delta2 = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
   pos->completedDepth = DEPTH_ZERO;
 
@@ -350,6 +350,7 @@ void thread_search(Pos *pos)
   }
 
   int multiPV = option_value(OPT_MULTI_PV);
+if(option_value(OPT_CORRESPONDENCEMODE)) multiPV=256;
 #if 0
   Skill skill(option_value(OPT_SKILL_LEVEL));
 
@@ -415,10 +416,12 @@ void thread_search(Pos *pos)
 
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
-        delta = (Value)18;
-        alpha = max(rm->move[PVIdx].previousScore - delta,-VALUE_INFINITE);
-        beta  = min(rm->move[PVIdx].previousScore + delta, VALUE_INFINITE);
-      }
+        Value prevScore = rm->move[PVIdx].previousScore;
+        delta1 = (prevScore < 0) ? (Value)((int)(8.0 + 0.1 * abs(prevScore))) : (Value)18;
+        delta2 = (prevScore > 0) ? (Value)((int)(8.0 + 0.1 * abs(prevScore))) : (Value)18;
+        alpha = max(prevScore - delta1,-VALUE_INFINITE);
+        beta  = min(prevScore + delta2, VALUE_INFINITE);
+	  }
 
       // Start with a small aspiration window and, in the case of a fail
       // high/low, re-search with a bigger window until we're not failing
@@ -456,7 +459,7 @@ void thread_search(Pos *pos)
         // re-search, otherwise exit the loop.
         if (bestValue <= alpha) {
           beta = (alpha + beta) / 2;
-          alpha = max(bestValue - delta, -VALUE_INFINITE);
+          alpha = max(bestValue - delta1, -VALUE_INFINITE);
 
           if (pos->thread_idx == 0) {
             mainThread.failedLow = 1;
@@ -464,11 +467,12 @@ void thread_search(Pos *pos)
           }
         } else if (bestValue >= beta) {
 //          alpha = (alpha + beta) / 2;
-          beta = min(bestValue + delta, VALUE_INFINITE);
+          beta = min(bestValue + delta2, VALUE_INFINITE);
         } else
           break;
 
-        delta += delta / 4 + 5;
+        delta1 += delta1 / 4 + 5;
+        delta2 += delta2 / 4 + 5;
 
         assert(alpha >= -VALUE_INFINITE && beta <= VALUE_INFINITE);
       }
@@ -489,11 +493,11 @@ skip_search:
     if (!Signals.stop)
       pos->completedDepth = pos->rootDepth;
 
-    if (rm->move[0].pv[0] != lastBestMove) {
+	if (rm->move[0].pv[0] != lastBestMove) {
       lastBestMove = rm->move[0].pv[0];
       lastBestMoveDepth = pos->rootDepth;
-    }
-
+    } 
+   
     // Have we found a "mate in x"?
     if (   Limits.mate
         && bestValue >= VALUE_MATE_IN_MAX_PLY
@@ -518,15 +522,14 @@ skip_search:
                           bestValue - mainThread.previousScore };
 
         int improvingFactor = max(229, min(715, 357 + 119 * F[0] - 6 * F[1]));
-
-        int us = pos_stm();
+		int us = pos_stm();
         int thinkHard =   DrawValue[us] == bestValue
                        && Limits.time[us] - time_elapsed() > Limits.time[us ^ 1]
                        && pv_is_draw(pos);
 
         double unstablePvFactor = 1 + mainThread.bestMoveChanges + thinkHard;
 
-        // If the best move is stable over several iterations, reduce time
+		// If the best move is stable over several iterations, reduce time
         // for this move, the longer the move has been stable, the more.
         // Use part of the time gained from a previous stable move for the
         // current move.
@@ -534,10 +537,9 @@ skip_search:
         for (int i = 3; i < 6; i++)
           if (lastBestMoveDepth * i < pos->completedDepth && !thinkHard)
             timeReduction *= 1.3;
-        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) / timeReduction;
-
+        unstablePvFactor *= pow(mainThread.previousTimeReduction, 0.51) /timeReduction;
         if (   rm->size == 1
-            || time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
+			|| time_elapsed() > time_optimum() * unstablePvFactor * improvingFactor / 628)
         {
           // If we are allowed to ponder do not stop the search now but
           // keep pondering until the GUI sends "ponderhit" or "stop".
@@ -684,7 +686,6 @@ void update_capture_stats(const Pos *pos, Move move, Move *captures,
     cpth_update(*pos->captureHistory, moved_piece, to_sq(captures[i]), captured, -bonus);
   }
 }
-
 // update_stats() updates killers, history, countermove and countermove
 // plus follow-up move history when a new quiet best move is found.
 

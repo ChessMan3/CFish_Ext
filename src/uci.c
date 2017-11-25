@@ -324,6 +324,7 @@ void uci_loop(int argc, char **argv)
     }
     else if (strcmp(token, "ucinewgame") == 0)
       search_clear();
+
     else if (strcmp(token, "isready") == 0) {
       process_delayed_settings();
       printf("readyok\n");

@@ -182,7 +182,7 @@ static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
 #define KnightCheck       790
 
 // Thresholds for lazy and space evaluation
-#define LazyThreshold 1500
+
 #define SpaceThreshold 12222
 
 
@@ -383,7 +383,7 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
     // number and types of the enemy's attacking pieces, the number of
     // attacked and weak squares around our king, the absence of queen and
     // and the quality of the pawn shelter (current 'score' value).
-    kingDanger =  ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
+	kingDanger =  ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them]
                 + 102 * ei->kingAdjacentZoneAttacksCount[Them]
                 + 191 * popcount(ei->kingRing[Us] & weak)
                 + 143 * !!pinned_pieces(pos, Us)
@@ -769,11 +769,6 @@ Value evaluate(const Pos *pos)
   // Probe the pawn hash table
   ei.pe = pawn_probe(pos);
   score += ei.pe->score;
-
-  // Early exit if score is high
-  v = (mg_value(score) + eg_value(score)) / 2;
-  if (abs(v) > LazyThreshold)
-    return pos_stm() == WHITE ? v : -v;
 
   // Initialize attack and king safety bitboards.
   evalinfo_init(pos, &ei, WHITE);
