@@ -200,6 +200,8 @@ INLINE int make_castling_right(int c, int s)
 #define MidgameLimit 15258
 #define EndgameLimit 3915
 
+#define QUEEN_DIAGONAL 7
+
 #define PAWN   1
 #define KNIGHT 2
 #define BISHOP 3
