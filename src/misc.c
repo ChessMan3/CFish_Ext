@@ -50,7 +50,7 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
-  printf("Cfish %s", Version);
+  printf("CiChess %s", Version);
 
   if (strlen(Version) == 0) {
     int day, month, year;
@@ -67,11 +67,11 @@ void print_engine_info(int to_uci)
   }
 
   printf("%s%s%s%s\n", Is64Bit ? " x64" : " x32"
-                     , HasPext ? " BMI2" : ( USE_AVX ? " AVX" : (HasPopCnt ? " POPCNT" : ""))
-                     , HasNuma ? " NUMA" : ""
+                     , HasPext ? " BMI2" : ( USE_AVX ? " AVX" : (HasPopCnt ? " POP" : ""))
+                     , HasNuma ? " N" : ""
                      , to_uci ? "\nid author T. Romstad, M. Costalba, "
                                 "J. Kiiski, G. Linscott"
-                              : " by Syzygy based on Stockfish");
+                              : " by ChessMan3 based on CFish and CorChess");
   fflush(stdout);
 }
 
