@@ -50,7 +50,7 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
-  printf("CiChess %s", Version);
+  printf("CiChess_1.8a %s", Version);
 
   if (strlen(Version) == 0) {
     int day, month, year;
