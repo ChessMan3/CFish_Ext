@@ -60,8 +60,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if (!rootNode) {
     // Step 2. Check for aborted search and immediate draw
     if (load_rlx(Signals.stop) || is_draw(pos) || ss->ply >= MAX_PLY)
-      return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos)
-                                            : DrawValue[pos_stm()];
+      return ss->ply >= MAX_PLY && !inCheck ? evaluate(pos) : VALUE_DRAW;
 
     // Step 3. Mate distance pruning. Even if we mate at the next move our
     // score would be at best mate_in(ss->ply+1), but if alpha is already
@@ -207,7 +206,7 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
              ss->staticEval, tt_generation());
   }
 
-  if (ss->skipEarlyPruning)
+  if (ss->skipEarlyPruning || !pos_non_pawn_material(pos_stm()))
     goto moves_loop;
 
   // Step 6. Razoring (skipped when in check)
@@ -228,15 +227,13 @@ Value search_NonPV(Pos *pos, Stack *ss, Value alpha, Depth depth, int cutNode)
   if ( option_value(OPT_FUTILITY) && !rootNode
       &&  depth < 7 * ONE_PLY
       &&  eval - futility_margin(depth) >= beta
-      &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
-      &&  pos_non_pawn_material(pos_stm()))
+      &&  eval < VALUE_KNOWN_WIN)  // Do not return unproven wins
     return eval; // - futility_margin(depth); (do not do the right thing)
 
   // Step 8. Null move search with verification search (is omitted in PV nodes)
   if ( option_value(OPT_NULLMOVE) && !PvNode
       && eval >= beta
-      && ss->staticEval >= beta - 36 * depth / ONE_PLY + 225
-      && pos_non_pawn_material(pos_stm()))
+      && ss->staticEval >= beta - 36 * depth / ONE_PLY + 225)
   {
     assert(eval - beta >= 0);
 
@@ -665,7 +662,7 @@ moves_loop: // When in check search starts from here.
   // search then return a fail low score.
   if (!moveCount)
     bestValue = excludedMove ? alpha
-               :     inCheck ? mated_in(ss->ply) : DrawValue[pos_stm()];
+               :     inCheck ? mated_in(ss->ply) : VALUE_DRAW;
   else if (bestMove) {
     // Quiet best move: update move sorting heuristics.
     if (!is_capture_or_promotion(pos, bestMove))
