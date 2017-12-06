@@ -25,7 +25,6 @@
 #include "evaluate.h"
 #include "material.h"
 #include "pawns.h"
-#include "uci.h"
 
 #define Center      ((FileDBB | FileEBB) & (Rank4BB | Rank5BB))
 #define QueenSide   (FileABB | FileBBB | FileCBB | FileDBB)
@@ -401,8 +400,8 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
     safe  = ~pieces_c(Them);
     safe &= ~ei->attackedBy[Us][0] | (weak & ei->attackedBy2[Them]);
 
-    b1 = attacks_bb_rook(ksq, pieces() ^ pieces_cp(Us, QUEEN));
-    b2 = attacks_bb_bishop(ksq, pieces() ^ pieces_cp(Us, QUEEN));
+    b1 = attacks_from_rook(ksq);
+    b2 = attacks_from_bishop(ksq);
 
     // Enemy queen safe checks
     if ((b1 | b2) & ei->attackedBy[Them][QUEEN] & safe & ~ei->attackedBy[Us][QUEEN])
@@ -442,15 +441,11 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
 
     else if (b & other)
       score -= OtherCheck;
-  
-    int KingSafe = option_value(OPT_KingSafe) / 100;
-    if (option_value(OPT_Tactical))
-    KingSafe = 5; 
 
     // Transform the kingDanger units into a Score, and subtract it from
     // the evaluation.
     if (kingDanger > 0)
-      score -= make_score(kingDanger * KingSafe * kingDanger / 4096, kingDanger / 16);
+      score -= make_score(kingDanger * kingDanger / 4096, kingDanger / 16);
   }
 
   // King tropism: firstly, find squares that we attack in the enemy king flank
