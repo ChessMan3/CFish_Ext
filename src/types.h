@@ -200,8 +200,8 @@ INLINE int make_castling_right(int c, int s)
 #define BishopValueEg 891
 #define RookValueMg   1282
 #define RookValueEg   1373
-#define QueenValueMg  2526
-#define QueenValueEg  2646
+#define QueenValueMg  2560
+#define QueenValueEg  2680
 
 #define MidgameLimit 15258
 #define EndgameLimit 3915

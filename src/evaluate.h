@@ -5,7 +5,7 @@
 
 typedef struct Pos Pos;
 
-#define Tempo ((Value)20)
+#define Tempo ((Value)22)
 
 extern Score Contempt;
 
