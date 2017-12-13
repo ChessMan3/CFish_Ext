@@ -52,17 +52,20 @@ typedef void (*OnChange)(Option *);
 #define OPT_SYZ_50_MOVE     12
 #define OPT_SYZ_PROBE_LIMIT 13
 #define OPT_SYZ_USE_DTM     14
-#define OPT_LARGE_PAGES     15
-#define OPT_WIDESEARCH      16
-#define OPT_CLEAN_SEARCH    17
-#define OPT_RAZORING        18
-#define OPT_FUTILITY        19
-#define OPT_PRUNING         20
-#define OPT_NULLMOVE        21
-#define OPT_PROBCUT         22
-#define OPT_KingSafe        23
-#define OPT_Tactical        24
-#define OPT_NUMA            25
+#define OPT_BOOK_FILE       15
+#define OPT_BOOK_BEST_MOVE  16
+#define OPT_BOOK_DEPTH      17
+#define OPT_LARGE_PAGES     18
+#define OPT_WIDESEARCH      19
+#define OPT_CLEAN_SEARCH    20
+#define OPT_RAZORING        21
+#define OPT_FUTILITY        22
+#define OPT_PRUNING         23
+#define OPT_NULLMOVE        24
+#define OPT_PROBCUT         25
+#define OPT_KingSafe        26
+#define OPT_Tactical        27
+#define OPT_NUMA            28
 
 struct Option {
   char *name;
