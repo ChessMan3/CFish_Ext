@@ -769,7 +769,7 @@ Value evaluate(const Pos *pos)
   // If we have a specialized evaluation function for the current material
   // configuration, call it and return.
   if (material_specialized_eval_exists(ei.me))
-    return material_evaluate(ei.me, pos);
+    return material_evaluate(ei.me, pos) + Tempo;
 
   // Initialize score by reading the incrementally updated scores included
   // in the position struct (material + piece square tables) and the
@@ -784,7 +784,7 @@ Value evaluate(const Pos *pos)
   // Early exit if score is high
   v = (mg_value(score) + eg_value(score)) / 2;
   if (abs(v) > LazyThreshold)
-    return pos_stm() == WHITE ? v : -v;
+    return (pos_stm() == WHITE ? v : -v) + Tempo;
 
   // Initialize attack and king safety bitboards.
   evalinfo_init(pos, &ei, WHITE);
